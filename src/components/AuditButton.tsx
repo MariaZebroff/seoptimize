@@ -20,11 +20,12 @@ interface AuditResult {
 
 interface AuditButtonProps {
   url: string
+  siteId?: string
   onAuditComplete?: (result: AuditResult) => void
   className?: string
 }
 
-export default function AuditButton({ url, onAuditComplete, className = "" }: AuditButtonProps) {
+export default function AuditButton({ url, siteId, onAuditComplete, className = "" }: AuditButtonProps) {
   const [isAuditing, setIsAuditing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,7 +39,7 @@ export default function AuditButton({ url, onAuditComplete, className = "" }: Au
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, siteId }),
       })
 
       const data = await response.json()

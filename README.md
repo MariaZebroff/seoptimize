@@ -8,11 +8,22 @@ A comprehensive SEO optimization tool built with Next.js, featuring website audi
 - **Site Management**: Add and manage multiple websites
 - **Site Auditing**: Comprehensive website analysis including:
   - Page title and meta description extraction
-  - H1 tag analysis
+  - H1 tag analysis (including nested HTML elements)
   - Broken link detection
   - Mobile performance scoring
   - Performance, SEO, Accessibility, and Best Practices scores
+- **Audit History**: Complete audit history with timestamps and detailed results
 - **Real-time Results**: Interactive dashboard with detailed audit reports
+
+## Audit History
+
+The application automatically saves all audit results to the database, creating a complete history for each site:
+
+- **Automatic Storage**: Every audit (successful or failed) is saved with timestamp
+- **Site Association**: Audits are linked to specific sites when run from the dashboard
+- **Historical View**: View all past audits with scores and detailed results
+- **Data Persistence**: Audit history is preserved even if sites are deleted
+- **User Isolation**: Each user only sees their own audit history
 
 ## Tech Stack
 
@@ -37,7 +48,8 @@ This application uses Supabase for authentication and data storage. Make sure yo
 The database includes:
 - User authentication (handled by Supabase Auth)
 - Sites table with user isolation (Row Level Security)
-- Proper policies to ensure users only see their own sites
+- Audits table for storing complete audit history
+- Proper policies to ensure users only see their own data
 
 ## Getting Started
 

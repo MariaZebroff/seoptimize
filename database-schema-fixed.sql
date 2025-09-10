@@ -48,7 +48,7 @@ CREATE POLICY "Users can update own sites" ON sites
 CREATE POLICY "Users can delete own sites" ON sites
   FOR DELETE USING (auth.uid() = user_id);
 
--- Create policies for audits table
+-- Create policies for audits table (allow null user_id for anonymous audits)
 CREATE POLICY "Users can view own audits" ON audits
   FOR SELECT USING (auth.uid() = user_id OR user_id IS NULL);
 
@@ -61,11 +61,10 @@ CREATE POLICY "Users can update own audits" ON audits
 CREATE POLICY "Users can delete own audits" ON audits
   FOR DELETE USING (auth.uid() = user_id OR user_id IS NULL);
 
--- Create index for better performance
+-- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_sites_user_id ON sites(user_id);
 CREATE INDEX IF NOT EXISTS idx_sites_created_at ON sites(created_at);
 CREATE INDEX IF NOT EXISTS idx_audits_user_id ON audits(user_id);
 CREATE INDEX IF NOT EXISTS idx_audits_site_id ON audits(site_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_audits_url ON audits(url);
-

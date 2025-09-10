@@ -98,11 +98,12 @@ export class HttpAuditService {
     const metaDescriptionMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["'][^>]*>/i)
     const metaDescription = metaDescriptionMatch ? metaDescriptionMatch[1].trim() : ''
 
-    // Extract H1 tags
-    const h1Matches = html.match(/<h1[^>]*>([^<]*)<\/h1>/gi) || []
+    // Extract H1 tags (including nested text content)
+    const h1Matches = html.match(/<h1[^>]*>(.*?)<\/h1>/gis) || []
     const h1Tags = h1Matches.map(match => {
-      const contentMatch = match.match(/<h1[^>]*>([^<]*)<\/h1>/i)
-      return contentMatch ? contentMatch[1].trim() : ''
+      // Remove all HTML tags to get clean text content, including nested elements
+      const textContent = match.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+      return textContent
     }).filter(text => text.length > 0)
 
     // Simple broken link detection (look for common patterns)

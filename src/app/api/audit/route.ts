@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PuppeteerAuditService } from '@/lib/puppeteerAuditService'
 import { HttpAuditService } from '@/lib/httpAuditService'
+import { createSupabaseServerClient, saveAuditResultServer } from '@/lib/supabaseServer'
 
 export async function POST(request: NextRequest) {
   try {
     console.log('Audit API called')
-    const { url } = await request.json()
+    
+    const { url, siteId } = await request.json()
     console.log('URL received:', url)
+    console.log('Site ID received:', siteId)
     
     if (!url) {
       console.log('No URL provided')
@@ -33,6 +36,19 @@ export async function POST(request: NextRequest) {
       
       if (auditResult.status === 'success') {
         console.log('Puppeteer audit successful:', auditResult)
+        
+        // Save audit result to database
+        try {
+          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId)
+          if (saveError) {
+            console.error('Failed to save audit result:', saveError)
+          } else {
+            console.log('Audit result saved to database:', savedAudit?.id)
+          }
+        } catch (saveError) {
+          console.error('Error saving audit result:', saveError)
+        }
+        
         return NextResponse.json(auditResult)
       }
     } catch (puppeteerError) {
@@ -48,10 +64,35 @@ export async function POST(request: NextRequest) {
       
       if (auditResult.status === 'error') {
         console.log('HTTP audit also failed:', auditResult.error)
+        
+        // Save failed audit result to database
+        try {
+          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId)
+          if (saveError) {
+            console.error('Failed to save failed audit result:', saveError)
+          } else {
+            console.log('Failed audit result saved to database:', savedAudit?.id)
+          }
+        } catch (saveError) {
+          console.error('Error saving failed audit result:', saveError)
+        }
+        
         return NextResponse.json(
           { error: auditResult.error || 'Failed to audit website with both methods' },
           { status: 500 }
         )
+      }
+
+      // Save successful HTTP audit result to database
+      try {
+        const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId)
+        if (saveError) {
+          console.error('Failed to save HTTP audit result:', saveError)
+        } else {
+          console.log('HTTP audit result saved to database:', savedAudit?.id)
+        }
+      } catch (saveError) {
+        console.error('Error saving HTTP audit result:', saveError)
       }
 
       return NextResponse.json(auditResult)

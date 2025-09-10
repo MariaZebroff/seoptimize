@@ -174,9 +174,13 @@ export class PuppeteerAuditService {
       // Extract meta description
       const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
       
-      // Extract all H1 tags
+      // Extract all H1 tags (including nested text content)
       const h1Tags = Array.from(document.querySelectorAll('h1'))
-        .map(h1 => h1.textContent?.trim() || '')
+        .map(h1 => {
+          // Get all text content including nested elements, normalize whitespace
+          const text = h1.innerText?.trim() || h1.textContent?.trim() || ''
+          return text.replace(/\s+/g, ' ').trim()
+        })
         .filter(text => text.length > 0)
       
       // Check for broken internal links
