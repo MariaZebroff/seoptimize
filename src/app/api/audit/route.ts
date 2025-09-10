@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PuppeteerAuditService } from '@/lib/puppeteerAuditService'
 import { HttpAuditService } from '@/lib/httpAuditService'
 import { createSupabaseServerClient, saveAuditResultServer } from '@/lib/supabaseServer'
+import { createServerClient } from '@supabase/ssr'
+
+// Helper function to get user from request
+async function getUserFromRequest(request: NextRequest) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll() {
+          // No-op for API routes
+        },
+      },
+    }
+  )
+  
+  const { data: { user }, error } = await supabase.auth.getUser()
+  return { user, error }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +32,9 @@ export async function POST(request: NextRequest) {
     const { url, siteId } = await request.json()
     console.log('URL received:', url)
     console.log('Site ID received:', siteId)
+    
+    // Get user from request
+    const { user, error: userError } = await getUserFromRequest(request)
     
     if (!url) {
       console.log('No URL provided')
@@ -39,7 +64,7 @@ export async function POST(request: NextRequest) {
         
         // Save audit result to database
         try {
-          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId)
+          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, user?.id)
           if (saveError) {
             console.error('Failed to save audit result:', saveError)
           } else {
@@ -67,7 +92,7 @@ export async function POST(request: NextRequest) {
         
         // Save failed audit result to database
         try {
-          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId)
+          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, user?.id)
           if (saveError) {
             console.error('Failed to save failed audit result:', saveError)
           } else {
@@ -85,7 +110,7 @@ export async function POST(request: NextRequest) {
 
       // Save successful HTTP audit result to database
       try {
-        const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId)
+        const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, user?.id)
         if (saveError) {
           console.error('Failed to save HTTP audit result:', saveError)
         } else {

@@ -64,12 +64,14 @@ CREATE POLICY "Users can update own sites" ON sites
 CREATE POLICY "Users can delete own sites" ON sites
   FOR DELETE USING (auth.uid() = user_id);
 
--- Create policies for audits table (allow null user_id for anonymous audits)
+-- Create policies for audits table (more permissive for server-side operations)
 CREATE POLICY "Users can view own audits" ON audits
   FOR SELECT USING (auth.uid() = user_id OR user_id IS NULL);
 
+-- Allow inserts for authenticated users and anonymous audits
+-- More permissive for server-side API operations
 CREATE POLICY "Users can insert own audits" ON audits
-  FOR INSERT WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+  FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Users can update own audits" ON audits
   FOR UPDATE USING (auth.uid() = user_id OR user_id IS NULL);

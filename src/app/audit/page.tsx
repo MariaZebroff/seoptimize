@@ -2,8 +2,9 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { getCurrentUser } from "@/lib/supabaseAuth"
+import { getCurrentUser, getUserSites } from "@/lib/supabaseAuth"
 import AuditResults from "@/components/AuditResults"
+import AuditHistory from "@/components/AuditHistory"
 import type { User } from "@supabase/supabase-js"
 
 interface AuditResult {
@@ -22,6 +23,13 @@ interface AuditResult {
   error?: string
 }
 
+interface Site {
+  id: string
+  url: string
+  title: string | null
+  created_at: string
+}
+
 function AuditPageContent() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -29,6 +37,8 @@ function AuditPageContent() {
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null)
   const [isAuditing, setIsAuditing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sites, setSites] = useState<Site[]>([])
+  const [siteId, setSiteId] = useState<string | undefined>(undefined)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -39,6 +49,9 @@ function AuditPageContent() {
         router.push("/auth/signin")
       } else {
         setUser(user)
+        // Load user's sites
+        const { data: sitesData } = await getUserSites()
+        setSites(sitesData || [])
       }
       setLoading(false)
     }
@@ -51,6 +64,16 @@ function AuditPageContent() {
       setUrl(urlParam)
     }
   }, [searchParams])
+
+  // Find site ID when URL or sites change
+  useEffect(() => {
+    if (url && sites.length > 0) {
+      const matchingSite = sites.find(site => site.url === url)
+      setSiteId(matchingSite?.id)
+    } else {
+      setSiteId(undefined)
+    }
+  }, [url, sites])
 
   const runAudit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,7 +89,7 @@ function AuditPageContent() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: url.trim(), siteId }),
       })
 
       const data = await response.json()
@@ -160,6 +183,13 @@ function AuditPageContent() {
             loading={isAuditing} 
             error={error} 
           />
+
+          {/* Audit History for this specific website */}
+          {url && (
+            <div className="mt-8">
+              <AuditHistory siteId={siteId} limit={20} />
+            </div>
+          )}
         </div>
       </main>
     </div>

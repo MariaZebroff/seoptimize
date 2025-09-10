@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { getCurrentUser, signOut, addSite, getUserSites, deleteSite } from "@/lib/supabaseAuth"
 import AuditButton from "@/components/AuditButton"
-import AuditHistory from "@/components/AuditHistory"
 import type { User } from "@supabase/supabase-js"
 
 interface Site {
@@ -40,7 +39,6 @@ export default function Dashboard() {
   const [isAddingSite, setIsAddingSite] = useState(false)
   const [error, setError] = useState("")
   const [auditResults, setAuditResults] = useState<{[key: string]: AuditResult}>({})
-  const [refreshAuditHistory, setRefreshAuditHistory] = useState(0)
   const router = useRouter()
 
   const loadSites = useCallback(async () => {
@@ -127,8 +125,6 @@ export default function Dashboard() {
       ...prev,
       [url]: result
     }))
-    // Trigger audit history refresh
-    setRefreshAuditHistory(prev => prev + 1)
   }
 
   if (loading) {
@@ -339,11 +335,6 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Audit History Section */}
-          <div className="mt-8">
-            <AuditHistory key={refreshAuditHistory} limit={10} />
           </div>
 
           {/* User Info Section */}

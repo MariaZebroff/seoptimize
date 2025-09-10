@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 // Server-side Supabase client for API routes
@@ -29,17 +30,29 @@ export const createSupabaseServerClient = async () => {
   )
 }
 
+// Service role client that bypasses RLS policies
+export const createSupabaseServiceClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+}
+
 // Server-side audit result saving (without authentication requirement)
-export const saveAuditResultServer = async (auditResult: any, siteId?: string) => {
-  const supabase = await createSupabaseServerClient()
-  
-  // Try to get the current user, but don't fail if not authenticated
-  const { data: { user } } = await supabase.auth.getUser()
+export const saveAuditResultServer = async (auditResult: any, siteId?: string, userId?: string) => {
+  // Use service role client to bypass RLS policies
+  const supabase = createSupabaseServiceClient()
   
   const { data, error } = await supabase
     .from('audits')
     .insert({
-      user_id: user?.id || null, // Allow null for anonymous audits
+      user_id: userId || null, // Use provided user ID or null for anonymous audits
       site_id: siteId || null,
       url: auditResult.url,
       title: auditResult.title,
