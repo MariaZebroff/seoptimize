@@ -4,6 +4,29 @@ export interface PuppeteerAuditResult {
   title: string
   metaDescription: string
   h1Tags: string[]
+  h2Tags: string[]
+  h3Tags: string[]
+  h4Tags: string[]
+  h5Tags: string[]
+  h6Tags: string[]
+  titleWordCount: number
+  metaDescriptionWordCount: number
+  h1WordCount: number
+  h2WordCount: number
+  h3WordCount: number
+  h4WordCount: number
+  h5WordCount: number
+  h6WordCount: number
+  imagesWithoutAlt: string[]
+  imagesWithAlt: string[]
+  internalLinks: string[]
+  externalLinks: string[]
+  totalLinks: number
+  totalImages: number
+  imagesMissingAlt: number
+  internalLinkCount: number
+  externalLinkCount: number
+  headingStructure: any
   brokenLinks: string[]
   mobileScore: number
   performanceScore: number
@@ -143,6 +166,29 @@ export class PuppeteerAuditService {
         title: '',
         metaDescription: '',
         h1Tags: [],
+        h2Tags: [],
+        h3Tags: [],
+        h4Tags: [],
+        h5Tags: [],
+        h6Tags: [],
+        titleWordCount: 0,
+        metaDescriptionWordCount: 0,
+        h1WordCount: 0,
+        h2WordCount: 0,
+        h3WordCount: 0,
+        h4WordCount: 0,
+        h5WordCount: 0,
+        h6WordCount: 0,
+        imagesWithoutAlt: [],
+        imagesWithAlt: [],
+        internalLinks: [],
+        externalLinks: [],
+        totalLinks: 0,
+        totalImages: 0,
+        imagesMissingAlt: 0,
+        internalLinkCount: 0,
+        externalLinkCount: 0,
+        headingStructure: {},
         brokenLinks: [],
         mobileScore: 0,
         performanceScore: 0,
@@ -168,46 +214,153 @@ export class PuppeteerAuditService {
 
   private async extractSEOData(page: Page) {
     return await page.evaluate(() => {
-      // Extract title
+      // Helper function to count words
+      const countWords = (text: string): number => {
+        return text.trim().split(/\s+/).filter(word => word.length > 0).length
+      }
+
+      // Helper function to extract heading text
+      const extractHeadingText = (headings: NodeListOf<Element>): string[] => {
+        return Array.from(headings)
+          .map(heading => {
+            const text = heading.textContent?.trim() || ''
+            return text.replace(/\s+/g, ' ').trim()
+          })
+          .filter(text => text.length > 0)
+      }
+
+      // Extract title and word count
       const title = document.title || ''
+      const titleWordCount = countWords(title)
       
-      // Extract meta description
+      // Extract meta description and word count
       const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
+      const metaDescriptionWordCount = countWords(metaDescription)
       
-      // Extract all H1 tags (including nested text content)
-      const h1Tags = Array.from(document.querySelectorAll('h1'))
-        .map(h1 => {
-          // Get all text content including nested elements, normalize whitespace
-          const text = h1.innerText?.trim() || h1.textContent?.trim() || ''
-          return text.replace(/\s+/g, ' ').trim()
-        })
-        .filter(text => text.length > 0)
+      // Extract all heading levels
+      const h1Tags = extractHeadingText(document.querySelectorAll('h1'))
+      const h2Tags = extractHeadingText(document.querySelectorAll('h2'))
+      const h3Tags = extractHeadingText(document.querySelectorAll('h3'))
+      const h4Tags = extractHeadingText(document.querySelectorAll('h4'))
+      const h5Tags = extractHeadingText(document.querySelectorAll('h5'))
+      const h6Tags = extractHeadingText(document.querySelectorAll('h6'))
+
+      // Calculate word counts for each heading level
+      const h1WordCount = h1Tags.reduce((total, text) => total + countWords(text), 0)
+      const h2WordCount = h2Tags.reduce((total, text) => total + countWords(text), 0)
+      const h3WordCount = h3Tags.reduce((total, text) => total + countWords(text), 0)
+      const h4WordCount = h4Tags.reduce((total, text) => total + countWords(text), 0)
+      const h5WordCount = h5Tags.reduce((total, text) => total + countWords(text), 0)
+      const h6WordCount = h6Tags.reduce((total, text) => total + countWords(text), 0)
+
+      // Extract images and alt text analysis
+      const images = Array.from(document.querySelectorAll('img'))
+      const imagesWithoutAlt: string[] = []
+      const imagesWithAlt: string[] = []
       
-      // Check for broken internal links
+      images.forEach(img => {
+        const src = img.getAttribute('src') || img.getAttribute('data-src') || 'unknown'
+        const alt = img.getAttribute('alt')
+        
+        if (!alt || alt.trim() === '') {
+          imagesWithoutAlt.push(src)
+        } else {
+          imagesWithAlt.push(src)
+        }
+      })
+
+      const totalImages = images.length
+      const imagesMissingAlt = imagesWithoutAlt.length
+
+      // Extract and analyze links
       const links = Array.from(document.querySelectorAll('a[href]'))
+      const internalLinks: string[] = []
+      const externalLinks: string[] = []
       const brokenLinks: string[] = []
+      
+      const currentDomain = window.location.hostname
       
       links.forEach(link => {
         const href = link.getAttribute('href')
-        if (href) {
-          // Check for obviously broken patterns
-          if (href.includes('javascript:') || href.includes('void(0)') || href === '#') {
-            brokenLinks.push(href)
+        if (!href) return
+
+        // Check for broken links
+        if (href.includes('javascript:') || href.includes('void(0)') || href === '#') {
+          brokenLinks.push(href)
+          return
+        }
+
+        // Check if link has text content
+        if (!link.textContent?.trim() && link.getAttribute('aria-hidden') === 'true') {
+          brokenLinks.push(href)
+          return
+        }
+
+        // Classify as internal or external
+        try {
+          const linkUrl = new URL(href, window.location.href)
+          if (linkUrl.hostname === currentDomain || linkUrl.hostname === '') {
+            internalLinks.push(href)
+          } else {
+            externalLinks.push(href)
           }
-          // Check for relative links that might be broken
-          else if (!href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('tel:') && !href.startsWith('#')) {
-            // Check if the link element has any obvious issues
-            if (link.textContent?.trim() === '' || link.getAttribute('aria-hidden') === 'true') {
-              brokenLinks.push(href)
-            }
+        } catch {
+          // Relative links are considered internal
+          if (!href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+            internalLinks.push(href)
+          } else {
+            externalLinks.push(href)
           }
         }
       })
+
+      const totalLinks = links.length
+      const internalLinkCount = internalLinks.length
+      const externalLinkCount = externalLinks.length
+
+      // Create heading structure analysis
+      const headingStructure = {
+        h1: h1Tags.length,
+        h2: h2Tags.length,
+        h3: h3Tags.length,
+        h4: h4Tags.length,
+        h5: h5Tags.length,
+        h6: h6Tags.length,
+        total: h1Tags.length + h2Tags.length + h3Tags.length + h4Tags.length + h5Tags.length + h6Tags.length,
+        hierarchy: {
+          hasH1: h1Tags.length > 0,
+          hasMultipleH1: h1Tags.length > 1,
+          hasProperHierarchy: h1Tags.length > 0 && (h2Tags.length > 0 || h3Tags.length > 0)
+        }
+      }
 
       return {
         title,
         metaDescription,
         h1Tags,
+        h2Tags,
+        h3Tags,
+        h4Tags,
+        h5Tags,
+        h6Tags,
+        titleWordCount,
+        metaDescriptionWordCount,
+        h1WordCount,
+        h2WordCount,
+        h3WordCount,
+        h4WordCount,
+        h5WordCount,
+        h6WordCount,
+        imagesWithoutAlt: imagesWithoutAlt.slice(0, 20), // Limit to first 20
+        imagesWithAlt: imagesWithAlt.slice(0, 20), // Limit to first 20
+        internalLinks: internalLinks.slice(0, 50), // Limit to first 50
+        externalLinks: externalLinks.slice(0, 50), // Limit to first 50
+        totalLinks,
+        totalImages,
+        imagesMissingAlt,
+        internalLinkCount,
+        externalLinkCount,
+        headingStructure,
         brokenLinks: brokenLinks.slice(0, 10) // Limit to first 10
       }
     })

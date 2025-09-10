@@ -2,6 +2,29 @@ export interface HttpAuditResult {
   title: string
   metaDescription: string
   h1Tags: string[]
+  h2Tags: string[]
+  h3Tags: string[]
+  h4Tags: string[]
+  h5Tags: string[]
+  h6Tags: string[]
+  titleWordCount: number
+  metaDescriptionWordCount: number
+  h1WordCount: number
+  h2WordCount: number
+  h3WordCount: number
+  h4WordCount: number
+  h5WordCount: number
+  h6WordCount: number
+  imagesWithoutAlt: string[]
+  imagesWithAlt: string[]
+  internalLinks: string[]
+  externalLinks: string[]
+  totalLinks: number
+  totalImages: number
+  imagesMissingAlt: number
+  internalLinkCount: number
+  externalLinkCount: number
+  headingStructure: any
   brokenLinks: string[]
   mobileScore: number
   performanceScore: number
@@ -76,6 +99,29 @@ export class HttpAuditService {
         title: '',
         metaDescription: '',
         h1Tags: [],
+        h2Tags: [],
+        h3Tags: [],
+        h4Tags: [],
+        h5Tags: [],
+        h6Tags: [],
+        titleWordCount: 0,
+        metaDescriptionWordCount: 0,
+        h1WordCount: 0,
+        h2WordCount: 0,
+        h3WordCount: 0,
+        h4WordCount: 0,
+        h5WordCount: 0,
+        h6WordCount: 0,
+        imagesWithoutAlt: [],
+        imagesWithAlt: [],
+        internalLinks: [],
+        externalLinks: [],
+        totalLinks: 0,
+        totalImages: 0,
+        imagesMissingAlt: 0,
+        internalLinkCount: 0,
+        externalLinkCount: 0,
+        headingStructure: {},
         brokenLinks: [],
         mobileScore: 0,
         performanceScore: 0,
@@ -91,50 +137,154 @@ export class HttpAuditService {
   }
 
   private parseHTMLForSEO(html: string) {
-    // Simple regex-based HTML parsing
+    // Helper function to count words
+    const countWords = (text: string): number => {
+      return text.trim().split(/\s+/).filter(word => word.length > 0).length
+    }
+
+    // Helper function to extract heading text
+    const extractHeadingText = (headingMatches: RegExpMatchArray | null): string[] => {
+      if (!headingMatches) return []
+      return headingMatches.map(match => {
+        const textContent = match.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+        return textContent
+      }).filter(text => text.length > 0)
+    }
+
+    // Extract title and word count
     const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i)
     const title = titleMatch ? titleMatch[1].trim() : ''
+    const titleWordCount = countWords(title)
 
+    // Extract meta description and word count
     const metaDescriptionMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["'][^>]*>/i)
     const metaDescription = metaDescriptionMatch ? metaDescriptionMatch[1].trim() : ''
+    const metaDescriptionWordCount = countWords(metaDescription)
 
-    // Extract H1 tags (including nested text content)
-    const h1Matches = html.match(/<h1[^>]*>(.*?)<\/h1>/gis) || []
-    const h1Tags = h1Matches.map(match => {
-      // Remove all HTML tags to get clean text content, including nested elements
-      const textContent = match.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-      return textContent
-    }).filter(text => text.length > 0)
+    // Extract all heading levels
+    const h1Matches = html.match(/<h1[^>]*>(.*?)<\/h1>/gis)
+    const h2Matches = html.match(/<h2[^>]*>(.*?)<\/h2>/gis)
+    const h3Matches = html.match(/<h3[^>]*>(.*?)<\/h3>/gis)
+    const h4Matches = html.match(/<h4[^>]*>(.*?)<\/h4>/gis)
+    const h5Matches = html.match(/<h5[^>]*>(.*?)<\/h5>/gis)
+    const h6Matches = html.match(/<h6[^>]*>(.*?)<\/h6>/gis)
 
-    // Simple broken link detection (look for common patterns)
-    const brokenLinkPatterns = [
-      /href=["']#["']/gi,
-      /href=["']javascript:void\(0\)["']/gi,
-      /href=["']javascript:["']/gi
-    ]
+    const h1Tags = extractHeadingText(h1Matches)
+    const h2Tags = extractHeadingText(h2Matches)
+    const h3Tags = extractHeadingText(h3Matches)
+    const h4Tags = extractHeadingText(h4Matches)
+    const h5Tags = extractHeadingText(h5Matches)
+    const h6Tags = extractHeadingText(h6Matches)
+
+    // Calculate word counts for each heading level
+    const h1WordCount = h1Tags.reduce((total, text) => total + countWords(text), 0)
+    const h2WordCount = h2Tags.reduce((total, text) => total + countWords(text), 0)
+    const h3WordCount = h3Tags.reduce((total, text) => total + countWords(text), 0)
+    const h4WordCount = h4Tags.reduce((total, text) => total + countWords(text), 0)
+    const h5WordCount = h5Tags.reduce((total, text) => total + countWords(text), 0)
+    const h6WordCount = h6Tags.reduce((total, text) => total + countWords(text), 0)
+
+    // Extract images and alt text analysis
+    const imageMatches = html.match(/<img[^>]*>/gi) || []
+    const imagesWithoutAlt: string[] = []
+    const imagesWithAlt: string[] = []
     
-    const brokenLinks: string[] = []
-    brokenLinkPatterns.forEach(pattern => {
-      const matches = html.match(pattern)
-      if (matches) {
-        matches.forEach(match => {
-          const hrefMatch = match.match(/href=["']([^"']*)["']/i)
-          if (hrefMatch) {
-            brokenLinks.push(hrefMatch[1])
-          }
-        })
+    imageMatches.forEach(imgTag => {
+      const srcMatch = imgTag.match(/src=["']([^"']*)["']/i) || imgTag.match(/data-src=["']([^"']*)["']/i)
+      const src = srcMatch ? srcMatch[1] : 'unknown'
+      const altMatch = imgTag.match(/alt=["']([^"']*)["']/i)
+      const alt = altMatch ? altMatch[1] : ''
+      
+      if (!alt || alt.trim() === '') {
+        imagesWithoutAlt.push(src)
+      } else {
+        imagesWithAlt.push(src)
       }
     })
+
+    const totalImages = imageMatches.length
+    const imagesMissingAlt = imagesWithoutAlt.length
+
+    // Extract and analyze links
+    const linkMatches = html.match(/<a[^>]*href=["']([^"']*)["'][^>]*>/gi) || []
+    const internalLinks: string[] = []
+    const externalLinks: string[] = []
+    const brokenLinks: string[] = []
+    
+    linkMatches.forEach(linkTag => {
+      const hrefMatch = linkTag.match(/href=["']([^"']*)["']/i)
+      if (!hrefMatch) return
+      
+      const href = hrefMatch[1]
+
+      // Check for broken links
+      if (href.includes('javascript:') || href.includes('void(0)') || href === '#') {
+        brokenLinks.push(href)
+        return
+      }
+
+      // Classify as internal or external
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        externalLinks.push(href)
+      } else if (href.startsWith('mailto:') || href.startsWith('tel:')) {
+        // Skip email and phone links
+      } else {
+        internalLinks.push(href)
+      }
+    })
+
+    const totalLinks = linkMatches.length
+    const internalLinkCount = internalLinks.length
+    const externalLinkCount = externalLinks.length
+
+    // Create heading structure analysis
+    const headingStructure = {
+      h1: h1Tags.length,
+      h2: h2Tags.length,
+      h3: h3Tags.length,
+      h4: h4Tags.length,
+      h5: h5Tags.length,
+      h6: h6Tags.length,
+      total: h1Tags.length + h2Tags.length + h3Tags.length + h4Tags.length + h5Tags.length + h6Tags.length,
+      hierarchy: {
+        hasH1: h1Tags.length > 0,
+        hasMultipleH1: h1Tags.length > 1,
+        hasProperHierarchy: h1Tags.length > 0 && (h2Tags.length > 0 || h3Tags.length > 0)
+      }
+    }
 
     return {
       title,
       metaDescription,
       h1Tags,
-      brokenLinks: brokenLinks.slice(0, 10)
+      h2Tags,
+      h3Tags,
+      h4Tags,
+      h5Tags,
+      h6Tags,
+      titleWordCount,
+      metaDescriptionWordCount,
+      h1WordCount,
+      h2WordCount,
+      h3WordCount,
+      h4WordCount,
+      h5WordCount,
+      h6WordCount,
+      imagesWithoutAlt: imagesWithoutAlt.slice(0, 20), // Limit to first 20
+      imagesWithAlt: imagesWithAlt.slice(0, 20), // Limit to first 20
+      internalLinks: internalLinks.slice(0, 50), // Limit to first 50
+      externalLinks: externalLinks.slice(0, 50), // Limit to first 50
+      totalLinks,
+      totalImages,
+      imagesMissingAlt,
+      internalLinkCount,
+      externalLinkCount,
+      headingStructure,
+      brokenLinks: brokenLinks.slice(0, 10) // Limit to first 10
     }
   }
 
-  private calculateBasicScores(seoData: { title: string; metaDescription: string; h1Tags: string[]; brokenLinks: string[] }, html: string) {
+  private calculateBasicScores(seoData: any, html: string) {
     let seoScore = 0
     let accessibilityScore = 0
     let bestPracticesScore = 0
