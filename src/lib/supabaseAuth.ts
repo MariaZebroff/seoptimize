@@ -67,11 +67,19 @@ export const signInWithGoogle = async () => {
 // Site management functions
 export const addSite = async (url: string, title?: string) => {
   checkEnvVars()
+  
+  // Get current user to ensure we're authenticated
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { data: null, error: { message: 'User not authenticated' } }
+  }
+  
   const { data, error } = await supabase
     .from('sites')
     .insert({
       url,
       title: title || null,
+      user_id: user.id
     })
     .select()
     .single()
@@ -80,28 +88,52 @@ export const addSite = async (url: string, title?: string) => {
 
 export const getUserSites = async () => {
   checkEnvVars()
+  
+  // Get current user to ensure we're authenticated
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { data: null, error: { message: 'User not authenticated' } }
+  }
+  
   const { data, error } = await supabase
     .from('sites')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
   return { data, error }
 }
 
 export const deleteSite = async (siteId: string) => {
   checkEnvVars()
+  
+  // Get current user to ensure we're authenticated
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: { message: 'User not authenticated' } }
+  }
+  
   const { error } = await supabase
     .from('sites')
     .delete()
     .eq('id', siteId)
+    .eq('user_id', user.id) // Double-check ownership
   return { error }
 }
 
 export const updateSite = async (siteId: string, updates: { url?: string; title?: string }) => {
   checkEnvVars()
+  
+  // Get current user to ensure we're authenticated
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { data: null, error: { message: 'User not authenticated' } }
+  }
+  
   const { data, error } = await supabase
     .from('sites')
     .update(updates)
     .eq('id', siteId)
+    .eq('user_id', user.id) // Double-check ownership
     .select()
     .single()
   return { data, error }

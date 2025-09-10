@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { getCurrentUser, signOut, addSite, getUserSites, deleteSite } from "@/lib/supabaseAuth"
+import AuditButton from "@/components/AuditButton"
 import type { User } from "@supabase/supabase-js"
 
 interface Site {
@@ -10,6 +11,22 @@ interface Site {
   url: string
   title: string | null
   created_at: string
+}
+
+interface AuditResult {
+  title: string
+  metaDescription: string
+  h1Tags: string[]
+  brokenLinks: string[]
+  mobileScore: number
+  performanceScore: number
+  accessibilityScore: number
+  seoScore: number
+  bestPracticesScore: number
+  url: string
+  timestamp: string
+  status: 'success' | 'error'
+  error?: string
 }
 
 export default function Dashboard() {
@@ -21,7 +38,24 @@ export default function Dashboard() {
   const [newSiteTitle, setNewSiteTitle] = useState("")
   const [isAddingSite, setIsAddingSite] = useState(false)
   const [error, setError] = useState("")
+  const [auditResults, setAuditResults] = useState<{[key: string]: AuditResult}>({})
   const router = useRouter()
+
+  const loadSites = useCallback(async () => {
+    try {
+      const { data, error } = await getUserSites()
+      if (error) {
+        console.error('Error loading sites:', error)
+        if (error.message === 'User not authenticated') {
+          router.push('/auth/signin')
+        }
+      } else {
+        setSites(data || [])
+      }
+    } catch (err) {
+      console.error('Error loading sites:', err)
+    }
+  }, [router])
 
   useEffect(() => {
     const getUser = async () => {
@@ -35,20 +69,7 @@ export default function Dashboard() {
       setLoading(false)
     }
     getUser()
-  }, [router])
-
-  const loadSites = async () => {
-    try {
-      const { data, error } = await getUserSites()
-      if (error) {
-        console.error('Error loading sites:', error)
-      } else {
-        setSites(data || [])
-      }
-    } catch {
-      console.error('Error loading sites')
-    }
-  }
+  }, [router, loadSites])
 
   const handleAddSite = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,14 +81,18 @@ export default function Dashboard() {
     try {
       const { data, error } = await addSite(newSiteUrl.trim(), newSiteTitle.trim() || undefined)
       if (error) {
-        setError(error.message)
+        if (error.message === 'User not authenticated') {
+          router.push('/auth/signin')
+        } else {
+          setError(error.message)
+        }
       } else {
         setSites([data, ...sites])
         setNewSiteUrl("")
         setNewSiteTitle("")
         setShowAddSite(false)
       }
-    } catch (error) {
+    } catch {
       setError("Failed to add site. Please try again.")
     } finally {
       setIsAddingSite(false)
@@ -81,12 +106,25 @@ export default function Dashboard() {
       const { error } = await deleteSite(siteId)
       if (error) {
         console.error('Error deleting site:', error)
+        if (error.message === 'User not authenticated') {
+          router.push('/auth/signin')
+        } else {
+          alert('Failed to delete site. Please try again.')
+        }
       } else {
         setSites(sites.filter(site => site.id !== siteId))
       }
-    } catch {
-      console.error('Error deleting site')
+    } catch (err) {
+      console.error('Error deleting site:', err)
+      alert('Failed to delete site. Please try again.')
     }
+  }
+
+  const handleAuditComplete = (url: string, result: AuditResult) => {
+    setAuditResults(prev => ({
+      ...prev,
+      [url]: result
+    }))
   }
 
   if (loading) {
@@ -106,8 +144,14 @@ export default function Dashboard() {
       <nav className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center">
+            <div className="flex items-center space-x-6">
               <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+              <button
+                onClick={() => router.push("/audit")}
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Site Audit
+              </button>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
@@ -243,11 +287,49 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-400">
                       Added {new Date(site.created_at).toLocaleDateString()}
                     </p>
-                    <div className="mt-3">
-                      <button className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
-                        Analyze SEO →
+                    <div className="mt-3 flex justify-between items-center">
+                      <AuditButton 
+                        url={site.url} 
+                        className="flex-1 mr-2"
+                        onAuditComplete={(result) => handleAuditComplete(site.url, result)}
+                      />
+                      <button 
+                        onClick={() => router.push(`/audit?url=${encodeURIComponent(site.url)}`)}
+                        className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                      >
+                        Full Report →
                       </button>
                     </div>
+                    {auditResults[site.url] && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium text-gray-700">Latest Audit</span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(auditResults[site.url].timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex justify-between">
+                            <span>Performance:</span>
+                            <span className={`font-medium ${
+                              auditResults[site.url].performanceScore >= 90 ? 'text-green-600' :
+                              auditResults[site.url].performanceScore >= 50 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {auditResults[site.url].performanceScore}/100
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>SEO:</span>
+                            <span className={`font-medium ${
+                              auditResults[site.url].seoScore >= 90 ? 'text-green-600' :
+                              auditResults[site.url].seoScore >= 50 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {auditResults[site.url].seoScore}/100
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

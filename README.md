@@ -1,4 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SEO Optimize
+
+A comprehensive SEO optimization tool built with Next.js, featuring website auditing capabilities powered by Google Lighthouse CI.
+
+## Features
+
+- **User Authentication**: Secure signup/signin with Supabase
+- **Site Management**: Add and manage multiple websites
+- **Site Auditing**: Comprehensive website analysis including:
+  - Page title and meta description extraction
+  - H1 tag analysis
+  - Broken link detection
+  - Mobile performance scoring
+  - Performance, SEO, Accessibility, and Best Practices scores
+- **Real-time Results**: Interactive dashboard with detailed audit reports
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Authentication**: Supabase Auth
+- **Database**: Supabase
+- **Auditing**: Google Lighthouse CI, Puppeteer
+
+## Database Setup
+
+This application uses Supabase for authentication and data storage. Make sure you have:
+
+1. **Supabase Project**: Create a project at [supabase.com](https://supabase.com)
+2. **Environment Variables**: Set up your `.env.local` file with:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+3. **Database Schema**: Run the SQL commands in `database-schema.sql` in your Supabase SQL editor
+
+The database includes:
+- User authentication (handled by Supabase Auth)
+- Sites table with user isolation (Row Level Security)
+- Proper policies to ensure users only see their own sites
 
 ## Getting Started
 
@@ -16,7 +55,28 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Site Auditing
+
+The application includes a powerful site auditing feature that analyzes websites using Google Lighthouse CI:
+
+1. **Dashboard**: Add websites to your dashboard
+2. **Quick Audit**: Click "Run Audit" on any site card for instant results
+3. **Full Report**: Click "Full Report" for detailed analysis with tabs for:
+   - Overview: Performance scores and overall metrics
+   - SEO Data: Title, meta description, H1 tags, and broken links
+   - Performance: Detailed performance insights
+
+### Audit Metrics Collected
+
+- **Title**: Page title extraction
+- **Meta Description**: Meta description content
+- **H1 Tags**: All H1 headings on the page
+- **Broken Links**: Internal broken links detection
+- **Mobile Score**: Mobile performance score
+- **Performance Score**: Overall performance rating
+- **SEO Score**: SEO optimization rating
+- **Accessibility Score**: Web accessibility rating
+- **Best Practices Score**: Web best practices rating
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
