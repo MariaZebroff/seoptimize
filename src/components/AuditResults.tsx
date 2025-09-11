@@ -7,6 +7,24 @@ interface AuditResult {
   metaDescription: string
   h1Tags: string[]
   brokenLinks: string[]
+  brokenLinkDetails?: Array<{
+    url: string
+    statusCode: number
+    statusText: string
+    reason: string
+    parent: string
+    tag: string
+    attribute: string
+    linkText: string
+    isInternal: boolean
+    isBroken: boolean
+  }>
+  brokenLinkSummary?: {
+    total: number
+    broken: number
+    status: string
+    duration: number
+  }
   mobileScore: number
   performanceScore: number
   accessibilityScore: number
@@ -75,6 +93,117 @@ const SEODataCard = ({ title, content, type = 'text' }: { title: string; content
         <p className="text-sm text-gray-600">
           {content || <span className="text-gray-500 italic">Not found</span>}
         </p>
+      )}
+    </div>
+  )
+}
+
+const BrokenLinksCard = ({ brokenLinkDetails, brokenLinkSummary }: { 
+  brokenLinkDetails?: AuditResult['brokenLinkDetails']
+  brokenLinkSummary?: AuditResult['brokenLinkSummary']
+}) => {
+  const getStatusColor = (statusCode: number) => {
+    if (statusCode >= 500) return 'text-red-600 bg-red-50'
+    if (statusCode === 404) return 'text-red-600 bg-red-50'
+    return 'text-gray-600 bg-gray-50'
+  }
+
+  const getStatusIcon = (statusCode: number) => {
+    if (statusCode >= 500) return '🔴'
+    if (statusCode === 404) return '🔴'
+    return '🟢'
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h3 className="text-lg font-medium text-gray-900 mb-4">Broken Links Analysis</h3>
+      
+      {brokenLinkSummary && (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-gray-900">{brokenLinkSummary.total}</div>
+              <div className="text-sm text-gray-500">Total Links</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-red-600">{brokenLinkSummary.broken}</div>
+              <div className="text-sm text-gray-500">Broken Links</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-600">{brokenLinkSummary.total - brokenLinkSummary.broken}</div>
+              <div className="text-sm text-gray-500">Working Links</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-blue-600">{(brokenLinkSummary.duration / 1000).toFixed(1)}s</div>
+              <div className="text-sm text-gray-500">Check Duration</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {brokenLinkDetails && brokenLinkDetails.length > 0 ? (
+        <div className="space-y-3">
+          <h4 className="font-medium text-gray-900">Broken Link Details:</h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    URL
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Link Text
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Reason
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {brokenLinkDetails.map((link, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs">
+                      <div className="truncate" title={link.url}>
+                        {link.url}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
+                      <div className="truncate" title={link.linkText || 'No link text'}>
+                        {link.linkText || <span className="text-gray-400 italic">No text</span>}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(link.statusCode)}`}>
+                        {getStatusIcon(link.statusCode)} {link.statusCode} {link.statusText}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {link.isInternal ? (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Internal</span>
+                      ) : (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">External</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {link.reason}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <div className="text-green-600 text-4xl mb-2">✅</div>
+          <p className="text-gray-500">No broken links found!</p>
+        </div>
       )}
     </div>
   )
@@ -192,24 +321,32 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
           )}
 
           {activeTab === 'seo' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <SEODataCard 
-                title="Page Title" 
-                content={result.title} 
-              />
-              <SEODataCard 
-                title="Meta Description" 
-                content={result.metaDescription} 
-              />
-              <SEODataCard 
-                title="H1 Tags" 
-                content={result.h1Tags} 
-                type="list"
-              />
-              <SEODataCard 
-                title="Broken Links" 
-                content={result.brokenLinks} 
-                type="list"
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <SEODataCard 
+                  title="Page Title" 
+                  content={result.title} 
+                />
+                <SEODataCard 
+                  title="Meta Description" 
+                  content={result.metaDescription} 
+                />
+                <SEODataCard 
+                  title="H1 Tags" 
+                  content={result.h1Tags} 
+                  type="list"
+                />
+                <SEODataCard 
+                  title="Basic Broken Links" 
+                  content={result.brokenLinks} 
+                  type="list"
+                />
+              </div>
+              
+              {/* Comprehensive Broken Links Analysis */}
+              <BrokenLinksCard 
+                brokenLinkDetails={result.brokenLinkDetails}
+                brokenLinkSummary={result.brokenLinkSummary}
               />
             </div>
           )}

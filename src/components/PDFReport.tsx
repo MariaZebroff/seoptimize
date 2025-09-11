@@ -24,8 +24,8 @@ interface AuditData {
   h6_word_count?: number
   images_without_alt?: string[]
   images_with_alt?: string[]
-  internal_links?: string[]
-  external_links?: string[]
+  internal_links?: Array<{url: string, text: string}>
+  external_links?: Array<{url: string, text: string}>
   total_links?: number
   total_images?: number
   images_missing_alt?: number
@@ -347,7 +347,7 @@ const SEOAuditPDF: React.FC<PDFReportProps> = ({ auditData, siteName, siteUrl })
                   return (
                     <View key={level} style={{ marginRight: 15, marginBottom: 5 }}>
                       <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{level.toUpperCase()}: {tags.length}</Text>
-                      {/* <Text style={{ fontSize: 10, color: '#6B7280' }}>({wordCount} words)</Text> */}
+                      <Text style={{ fontSize: 10, color: '#6B7280' }}>({wordCount} words)</Text>
                     </View>
                   )
                 })}

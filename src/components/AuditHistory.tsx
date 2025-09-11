@@ -28,8 +28,8 @@ interface AuditRecord {
   h6_word_count: number
   images_without_alt: string[]
   images_with_alt: string[]
-  internal_links: string[]
-  external_links: string[]
+  internal_links: Array<{url: string, text: string}>
+  external_links: Array<{url: string, text: string}>
   total_links: number
   total_images: number
   images_missing_alt: number

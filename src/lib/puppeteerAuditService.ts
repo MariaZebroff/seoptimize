@@ -1,4 +1,5 @@
 import puppeteer, { Browser, Page } from 'puppeteer'
+import { BrokenLinkCheckerService } from './brokenLinkChecker'
 
 export interface PuppeteerAuditResult {
   title: string
@@ -19,8 +20,8 @@ export interface PuppeteerAuditResult {
   h6WordCount: number
   imagesWithoutAlt: string[]
   imagesWithAlt: string[]
-  internalLinks: string[]
-  externalLinks: string[]
+  internalLinks: Array<{url: string, text: string}>
+  externalLinks: Array<{url: string, text: string}>
   totalLinks: number
   totalImages: number
   imagesMissingAlt: number
@@ -28,6 +29,13 @@ export interface PuppeteerAuditResult {
   externalLinkCount: number
   headingStructure: any
   brokenLinks: string[]
+  brokenLinkDetails?: any[]
+  brokenLinkSummary?: {
+    total: number
+    broken: number
+    status: string
+    duration: number
+  }
   mobileScore: number
   performanceScore: number
   accessibilityScore: number
@@ -141,7 +149,7 @@ export class PuppeteerAuditService {
 
       console.log('Extracting SEO data...')
       // Extract SEO data
-      const seoData = await this.extractSEOData(page)
+      const seoData = await this.extractSEOData(page, url)
       console.log('SEO data extracted:', seoData)
       
       console.log('Calculating performance metrics...')
@@ -212,8 +220,9 @@ export class PuppeteerAuditService {
     }
   }
 
-  private async extractSEOData(page: Page) {
-    return await page.evaluate(() => {
+  private async extractSEOData(page: Page, url: string) {
+    // Extract basic SEO data from the page
+    const basicSeoData = await page.evaluate(() => {
       // Helper function to count words
       const countWords = (text: string): number => {
         return text.trim().split(/\s+/).filter(word => word.length > 0).length
@@ -272,11 +281,10 @@ export class PuppeteerAuditService {
       const totalImages = images.length
       const imagesMissingAlt = imagesWithoutAlt.length
 
-      // Extract and analyze links
+      // Extract and analyze links with text content
       const links = Array.from(document.querySelectorAll('a[href]'))
-      const internalLinks: string[] = []
-      const externalLinks: string[] = []
-      const brokenLinks: string[] = []
+      const internalLinks: Array<{url: string, text: string}> = []
+      const externalLinks: Array<{url: string, text: string}> = []
       
       const currentDomain = window.location.hostname
       
@@ -284,32 +292,28 @@ export class PuppeteerAuditService {
         const href = link.getAttribute('href')
         if (!href) return
 
-        // Check for broken links
+        // Skip obvious non-links for classification
         if (href.includes('javascript:') || href.includes('void(0)') || href === '#') {
-          brokenLinks.push(href)
           return
         }
 
-        // Check if link has text content
-        if (!link.textContent?.trim() && link.getAttribute('aria-hidden') === 'true') {
-          brokenLinks.push(href)
-          return
-        }
+        // Extract link text content
+        const linkText = link.textContent?.trim() || ''
 
         // Classify as internal or external
         try {
           const linkUrl = new URL(href, window.location.href)
           if (linkUrl.hostname === currentDomain || linkUrl.hostname === '') {
-            internalLinks.push(href)
+            internalLinks.push({url: href, text: linkText})
           } else {
-            externalLinks.push(href)
+            externalLinks.push({url: href, text: linkText})
           }
         } catch {
           // Relative links are considered internal
           if (!href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
-            internalLinks.push(href)
+            internalLinks.push({url: href, text: linkText})
           } else {
-            externalLinks.push(href)
+            externalLinks.push({url: href, text: linkText})
           }
         }
       })
@@ -361,9 +365,31 @@ export class PuppeteerAuditService {
         internalLinkCount,
         externalLinkCount,
         headingStructure,
-        brokenLinks: brokenLinks.slice(0, 10) // Limit to first 10
+        // brokenLinks will be added after comprehensive check
       }
     })
+
+    // Perform comprehensive broken link checking
+    console.log('🔍 Starting comprehensive broken link check...')
+    const brokenLinkChecker = BrokenLinkCheckerService.getInstance()
+    const brokenLinkResult = await brokenLinkChecker.checkPageLinks(url, {
+      timeout: 15000,
+      maxRetries: 2,
+      userAgent: 'SEO-Optimizer-Bot/1.0 (Puppeteer)'
+    })
+
+    // Combine basic SEO data with broken link results
+    return {
+      ...basicSeoData,
+      brokenLinks: brokenLinkResult.brokenLinks.map(link => link.url).slice(0, 10), // Limit to first 10 URLs
+      brokenLinkDetails: brokenLinkResult.brokenLinks.slice(0, 20), // Keep detailed info for first 20
+      brokenLinkSummary: {
+        total: brokenLinkResult.totalLinks,
+        broken: brokenLinkResult.brokenLinkCount,
+        status: brokenLinkResult.status,
+        duration: brokenLinkResult.duration
+      }
+    }
   }
 
   private async calculatePerformanceMetrics(page: Page) {

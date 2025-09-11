@@ -12,6 +12,24 @@ interface AuditResult {
   metaDescription: string
   h1Tags: string[]
   brokenLinks: string[]
+  brokenLinkDetails?: Array<{
+    url: string
+    statusCode: number
+    statusText: string
+    reason: string
+    parent: string
+    tag: string
+    attribute: string
+    linkText: string
+    isInternal: boolean
+    isBroken: boolean
+  }>
+  brokenLinkSummary?: {
+    total: number
+    broken: number
+    status: string
+    duration: number
+  }
   mobileScore: number
   performanceScore: number
   accessibilityScore: number
@@ -149,21 +167,10 @@ function AuditPageContent() {
 
           {/* Audit Form */}
           <div className="bg-white shadow rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Run New Audit</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Run New Audit For Websitenk cell</h2>
             <form onSubmit={runAudit} className="space-y-4">
               <div>
-                <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
-                  Website URL
-                </label>
-                <input
-                  type="url"
-                  id="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required
-                />
+                {url}
               </div>
               <div className="flex justify-end">
                 <button

@@ -22,8 +22,8 @@ interface EnhancedSEOData {
   h6_word_count: number | null
   images_without_alt: string[] | null
   images_with_alt: string[] | null
-  internal_links: string[] | null
-  external_links: string[] | null
+  internal_links: Array<{url: string, text: string}> | null
+  external_links: Array<{url: string, text: string}> | null
   total_links: number | null
   total_images: number | null
   images_missing_alt: number | null
@@ -31,6 +31,13 @@ interface EnhancedSEOData {
   external_link_count: number | null
   heading_structure: any
   broken_links: string[] | null
+  brokenLinkDetails?: any[]
+  brokenLinkSummary?: {
+    total: number
+    broken: number
+    status: string
+    duration: number
+  }
 }
 
 interface EnhancedSEOResultsProps {
@@ -301,12 +308,43 @@ const EnhancedSEOResults: React.FC<EnhancedSEOResultsProps> = ({ auditData }) =>
                   <span className="mr-2">🔗</span>
                   Internal Links ({auditData.internal_link_count || 0})
                 </h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {auditData.internal_links.map((link, index) => (
-                    <div key={index} className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
-                      <div className="font-mono text-xs text-blue-700 break-all">{link}</div>
-                    </div>
-                  ))}
+                <div className="max-h-60 overflow-y-auto">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            URL
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Link Text
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Type
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {auditData.internal_links.map((link, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-xs text-gray-900 max-w-xs">
+                              <div className="truncate font-mono" title={link.url}>
+                                {link.url}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-xs text-gray-600 max-w-xs">
+                              <div className="truncate" title={link.text || 'No link text'}>
+                                {link.text || <span className="text-gray-400 italic">No text</span>}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-xs">
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Internal</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -318,12 +356,43 @@ const EnhancedSEOResults: React.FC<EnhancedSEOResultsProps> = ({ auditData }) =>
                   <span className="mr-2">🌐</span>
                   External Links ({auditData.external_link_count || 0})
                 </h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {auditData.external_links.map((link, index) => (
-                    <div key={index} className="bg-purple-50 border border-purple-200 rounded p-3 text-sm">
-                      <div className="font-mono text-xs text-purple-700 break-all">{link}</div>
-                    </div>
-                  ))}
+                <div className="max-h-60 overflow-y-auto">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            URL
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Link Text
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Type
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {auditData.external_links.map((link, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-xs text-gray-900 max-w-xs">
+                              <div className="truncate font-mono" title={link.url}>
+                                {link.url}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-xs text-gray-600 max-w-xs">
+                              <div className="truncate" title={link.text || 'No link text'}>
+                                {link.text || <span className="text-gray-400 italic">No text</span>}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-xs">
+                              <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">External</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -334,13 +403,104 @@ const EnhancedSEOResults: React.FC<EnhancedSEOResultsProps> = ({ auditData }) =>
                 <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
                   <span className="mr-2">⚠️</span>
                   Broken Links ({auditData.broken_links.length})
+                  {auditData.brokenLinkSummary && (
+                    <span className="ml-2 text-sm text-gray-500">
+                      ({auditData.brokenLinkSummary.broken} of {auditData.brokenLinkSummary.total} total links)
+                    </span>
+                  )}
                 </h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {auditData.broken_links.map((link, index) => (
-                    <div key={index} className="bg-red-50 border border-red-200 rounded p-3 text-sm">
-                      <div className="font-mono text-xs text-red-700 break-all">{link}</div>
+                
+                {/* Summary Stats */}
+                {auditData.brokenLinkSummary && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <div className="font-medium text-gray-900">{auditData.brokenLinkSummary.total}</div>
+                        <div className="text-gray-600">Total Links</div>
+                      </div>
+                      <div>
+                        <div className="font-medium text-red-600">{auditData.brokenLinkSummary.broken}</div>
+                        <div className="text-gray-600">Broken</div>
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{auditData.brokenLinkSummary.status}</div>
+                        <div className="text-gray-600">Status</div>
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{auditData.brokenLinkSummary.duration}ms</div>
+                        <div className="text-gray-600">Duration</div>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                )}
+
+                <div className="max-h-60 overflow-y-auto">
+                  {auditData.brokenLinkDetails && auditData.brokenLinkDetails.length > 0 ? (
+                    // Show detailed broken link information in table format
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              URL
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Link Text
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Type
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Reason
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {auditData.brokenLinkDetails.map((link, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="px-3 py-2 text-xs text-gray-900 max-w-xs">
+                                <div className="truncate font-mono" title={link.url}>
+                                  {link.url}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-xs text-gray-600 max-w-xs">
+                                <div className="truncate" title={link.linkText || 'No link text'}>
+                                  {link.linkText || <span className="text-gray-400 italic">No text</span>}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-xs">
+                                <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
+                                  {link.statusCode} {link.statusText}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-xs">
+                                {link.isInternal ? (
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Internal</span>
+                                ) : (
+                                  <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">External</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-xs text-gray-500">
+                                {link.reason}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    // Fallback to simple broken link list
+                    <div className="space-y-2">
+                      {auditData.broken_links.map((link, index) => (
+                        <div key={index} className="bg-red-50 border border-red-200 rounded p-3 text-sm">
+                          <div className="font-mono text-xs text-red-700 break-all">{link}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

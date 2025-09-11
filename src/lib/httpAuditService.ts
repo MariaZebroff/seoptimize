@@ -1,3 +1,5 @@
+import { BrokenLinkCheckerService } from './brokenLinkChecker'
+
 export interface HttpAuditResult {
   title: string
   metaDescription: string
@@ -17,8 +19,8 @@ export interface HttpAuditResult {
   h6WordCount: number
   imagesWithoutAlt: string[]
   imagesWithAlt: string[]
-  internalLinks: string[]
-  externalLinks: string[]
+  internalLinks: Array<{url: string, text: string}>
+  externalLinks: Array<{url: string, text: string}>
   totalLinks: number
   totalImages: number
   imagesMissingAlt: number
@@ -26,6 +28,13 @@ export interface HttpAuditResult {
   externalLinkCount: number
   headingStructure: any
   brokenLinks: string[]
+  brokenLinkDetails?: any[]
+  brokenLinkSummary?: {
+    total: number
+    broken: number
+    status: string
+    duration: number
+  }
   mobileScore: number
   performanceScore: number
   accessibilityScore: number
@@ -76,8 +85,30 @@ export class HttpAuditService {
       console.log('HTML received, length:', html.length)
 
       // Parse HTML for SEO data
-      const seoData = this.parseHTMLForSEO(html)
-      console.log('SEO data extracted:', seoData)
+      const basicSeoData = this.parseHTMLForSEO(html)
+      console.log('Basic SEO data extracted:', basicSeoData)
+
+      // Perform comprehensive broken link checking
+      console.log('🔍 Starting comprehensive broken link check...')
+      const brokenLinkChecker = BrokenLinkCheckerService.getInstance()
+      const brokenLinkResult = await brokenLinkChecker.checkPageLinks(url, {
+        timeout: 15000,
+        maxRetries: 2,
+        userAgent: 'SEO-Optimizer-Bot/1.0 (HTTP)'
+      })
+
+      // Combine basic SEO data with broken link results
+      const seoData = {
+        ...basicSeoData,
+        brokenLinks: brokenLinkResult.brokenLinks.map(link => link.url).slice(0, 10), // Limit to first 10 URLs
+        brokenLinkDetails: brokenLinkResult.brokenLinks.slice(0, 20), // Keep detailed info for first 20
+        brokenLinkSummary: {
+          total: brokenLinkResult.totalLinks,
+          broken: brokenLinkResult.brokenLinkCount,
+          status: brokenLinkResult.status,
+          duration: brokenLinkResult.duration
+        }
+      }
 
       // Calculate basic scores
       const scores = this.calculateBasicScores(seoData, html)
@@ -206,34 +237,35 @@ export class HttpAuditService {
     const imagesMissingAlt = imagesWithoutAlt.length
 
     // Extract and analyze links
-    const linkMatches = html.match(/<a[^>]*href=["']([^"']*)["'][^>]*>/gi) || []
-    const internalLinks: string[] = []
-    const externalLinks: string[] = []
-    const brokenLinks: string[] = []
+    // Extract links with text content using improved regex
+    const linkRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gis
+    const internalLinks: Array<{url: string, text: string}> = []
+    const externalLinks: Array<{url: string, text: string}> = []
     
-    linkMatches.forEach(linkTag => {
-      const hrefMatch = linkTag.match(/href=["']([^"']*)["']/i)
-      if (!hrefMatch) return
+    let match
+    while ((match = linkRegex.exec(html)) !== null) {
+      const href = match[1]
+      const innerHTML = match[2] || ''
       
-      const href = hrefMatch[1]
+      // Extract text content from inner HTML (remove HTML tags)
+      const linkText = innerHTML.replace(/<[^>]*>/g, '').trim()
 
-      // Check for broken links
+      // Skip obvious non-links for classification
       if (href.includes('javascript:') || href.includes('void(0)') || href === '#') {
-        brokenLinks.push(href)
-        return
+        continue
       }
 
       // Classify as internal or external
       if (href.startsWith('http://') || href.startsWith('https://')) {
-        externalLinks.push(href)
+        externalLinks.push({url: href, text: linkText})
       } else if (href.startsWith('mailto:') || href.startsWith('tel:')) {
         // Skip email and phone links
       } else {
-        internalLinks.push(href)
+        internalLinks.push({url: href, text: linkText})
       }
-    })
+    }
 
-    const totalLinks = linkMatches.length
+    const totalLinks = internalLinks.length + externalLinks.length
     const internalLinkCount = internalLinks.length
     const externalLinkCount = externalLinks.length
 
@@ -280,7 +312,7 @@ export class HttpAuditService {
       internalLinkCount,
       externalLinkCount,
       headingStructure,
-      brokenLinks: brokenLinks.slice(0, 10) // Limit to first 10
+      // brokenLinks will be added by comprehensive checker
     }
   }
 
