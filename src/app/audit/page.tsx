@@ -5,12 +5,36 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { getCurrentUser, getUserSites } from "@/lib/supabaseAuth"
 import AuditResults from "@/components/AuditResults"
 import AuditHistory from "@/components/AuditHistory"
+import EnhancedSEOResults from "@/components/EnhancedSEOResults"
 import type { User } from "@supabase/supabase-js"
 
 interface AuditResult {
   title: string
   metaDescription: string
   h1Tags: string[]
+  h2Tags: string[]
+  h3Tags: string[]
+  h4Tags: string[]
+  h5Tags: string[]
+  h6Tags: string[]
+  titleWordCount: number
+  metaDescriptionWordCount: number
+  h1WordCount: number
+  h2WordCount: number
+  h3WordCount: number
+  h4WordCount: number
+  h5WordCount: number
+  h6WordCount: number
+  imagesWithoutAlt: string[]
+  imagesWithAlt: string[]
+  internalLinks: Array<{url: string, text: string}>
+  externalLinks: Array<{url: string, text: string}>
+  totalLinks: number
+  totalImages: number
+  imagesMissingAlt: number
+  internalLinkCount: number
+  externalLinkCount: number
+  headingStructure: any
   brokenLinks: Array<{url: string, text: string}>
   brokenLinkDetails?: Array<{
     url: string
@@ -190,6 +214,44 @@ function AuditPageContent() {
             loading={isAuditing} 
             error={error} 
           />
+
+          {/* Enhanced SEO Analysis */}
+          {auditResult && auditResult.status === 'success' && (
+            <div className="mt-8">
+              <EnhancedSEOResults auditData={{
+                url: auditResult.url || '',
+                title: auditResult.title || '',
+                meta_description: auditResult.metaDescription || '',
+                h1_tags: auditResult.h1Tags || [],
+                h2_tags: auditResult.h2Tags || [],
+                h3_tags: auditResult.h3Tags || [],
+                h4_tags: auditResult.h4Tags || [],
+                h5_tags: auditResult.h5Tags || [],
+                h6_tags: auditResult.h6Tags || [],
+                title_word_count: auditResult.titleWordCount || 0,
+                meta_description_word_count: auditResult.metaDescriptionWordCount || 0,
+                h1_word_count: auditResult.h1WordCount || 0,
+                h2_word_count: auditResult.h2WordCount || 0,
+                h3_word_count: auditResult.h3WordCount || 0,
+                h4_word_count: auditResult.h4WordCount || 0,
+                h5_word_count: auditResult.h5WordCount || 0,
+                h6_word_count: auditResult.h6WordCount || 0,
+                images_without_alt: auditResult.imagesWithoutAlt || [],
+                images_with_alt: auditResult.imagesWithAlt || [],
+                internal_links: auditResult.internalLinks || [],
+                external_links: auditResult.externalLinks || [],
+                total_links: auditResult.totalLinks || 0,
+                total_images: auditResult.totalImages || 0,
+                images_missing_alt: auditResult.imagesMissingAlt || 0,
+                internal_link_count: auditResult.internalLinkCount || 0,
+                external_link_count: auditResult.externalLinkCount || 0,
+                heading_structure: auditResult.headingStructure || { h1: 0, h2: 0, h3: 0, h4: 0, h5: 0, h6: 0, total: 0 },
+                broken_links: auditResult.brokenLinks || [],
+                broken_link_details: auditResult.brokenLinkDetails || [],
+                broken_link_summary: auditResult.brokenLinkSummary || { total: 0, broken: 0, status: 'success', duration: 0 }
+              }} />
+            </div>
+          )}
 
           {/* Audit History for this specific website */}
           {url && (

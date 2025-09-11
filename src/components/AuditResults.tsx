@@ -4,11 +4,35 @@ import { useState } from "react"
 import { DynamicRecommendationEngine } from '@/lib/dynamicRecommendations'
 import PerformanceCharts from './PerformanceCharts'
 import DynamicRecommendations from './DynamicRecommendations'
+import type { DetailedAuditResults } from '@/lib/puppeteerAuditService'
 
 interface AuditResult {
   title: string
   metaDescription: string
   h1Tags: string[]
+  h2Tags: string[]
+  h3Tags: string[]
+  h4Tags: string[]
+  h5Tags: string[]
+  h6Tags: string[]
+  titleWordCount: number
+  metaDescriptionWordCount: number
+  h1WordCount: number
+  h2WordCount: number
+  h3WordCount: number
+  h4WordCount: number
+  h5WordCount: number
+  h6WordCount: number
+  imagesWithoutAlt: string[]
+  imagesWithAlt: string[]
+  internalLinks: Array<{url: string, text: string}>
+  externalLinks: Array<{url: string, text: string}>
+  totalLinks: number
+  totalImages: number
+  imagesMissingAlt: number
+  internalLinkCount: number
+  externalLinkCount: number
+  headingStructure: any
   brokenLinks: Array<{url: string, text: string}>
   brokenLinkDetails?: Array<{
     url: string
@@ -28,15 +52,38 @@ interface AuditResult {
     status: string
     duration: number
   }
+  
+  // Performance Metrics
+  fcpScore: number
+  lcpScore: number
+  clsScore: number
+  fidScore: number
+  loadTime: number
+  performanceMetrics: any
+  
+  // Accessibility Data
+  accessibilityIssues: any
+  accessibilityRecommendations: any
+  accessibilityAudit: any
+  
+  // Best Practices Data
+  bestPracticesIssues: any
+  bestPracticesRecommendations: any
+  bestPracticesAudit: any
+  
+  // Overall Scores
   mobileScore: number
   performanceScore: number
   accessibilityScore: number
   seoScore: number
   bestPracticesScore: number
+  
+  // Audit Status
   url: string
   timestamp: string
   status: 'success' | 'error'
   error?: string
+  
   // New dynamic fields
   detailedResults?: DetailedAuditResults
   lighthouseResults?: unknown
