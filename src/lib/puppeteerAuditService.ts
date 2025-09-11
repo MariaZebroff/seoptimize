@@ -190,15 +190,38 @@ export interface PuppeteerAuditResult {
     status: string
     duration: number
   }
+  
+  // Performance Metrics
+  fcpScore: number
+  lcpScore: number
+  clsScore: number
+  fidScore: number
+  loadTime: number
+  performanceMetrics: any
+  
+  // Accessibility Data
+  accessibilityIssues: any
+  accessibilityRecommendations: any
+  accessibilityAudit: any
+  
+  // Best Practices Data
+  bestPracticesIssues: any
+  bestPracticesRecommendations: any
+  bestPracticesAudit: any
+  
+  // Overall Scores
   mobileScore: number
   performanceScore: number
   accessibilityScore: number
   seoScore: number
   bestPracticesScore: number
+  
+  // Audit Status
   url: string
   timestamp: string
   status: 'success' | 'error'
   error?: string
+  
   // New detailed audit results
   detailedResults?: DetailedAuditResults
   lighthouseResults?: any
@@ -349,9 +372,33 @@ export class PuppeteerAuditService {
         console.log('Lighthouse audit disabled, using basic audit only')
       }
 
+      // Use Lighthouse scores when available, otherwise fall back to calculated scores
+      const finalScores = detailedResults ? {
+        performanceScore: Math.round(detailedResults.performance.score),
+        accessibilityScore: Math.round(detailedResults.accessibility.score),
+        bestPracticesScore: Math.round(detailedResults['best-practices'].score),
+        seoScore: Math.round(detailedResults.seo.score),
+        mobileScore: Math.round(detailedResults.performance.score) // Use performance score for mobile too
+      } : {
+        performanceScore: performanceMetrics.performanceScore,
+        accessibilityScore: performanceMetrics.accessibilityScore,
+        bestPracticesScore: performanceMetrics.bestPracticesScore,
+        seoScore: performanceMetrics.seoScore,
+        mobileScore: performanceMetrics.mobileScore
+      }
+
       const result: PuppeteerAuditResult = {
         ...seoData,
         ...performanceMetrics,
+        // Override with Lighthouse scores when available
+        ...finalScores,
+        // Add detailed audit data if available
+        accessibilityIssues: detailedResults?.accessibility.issues || null,
+        accessibilityRecommendations: detailedResults?.accessibility.issues?.map(issue => issue.recommendation) || null,
+        accessibilityAudit: detailedResults?.accessibility || null,
+        bestPracticesIssues: detailedResults?.['best-practices'].issues || null,
+        bestPracticesRecommendations: detailedResults?.['best-practices'].issues?.map(issue => issue.recommendation) || null,
+        bestPracticesAudit: detailedResults?.['best-practices'] || null,
         url,
         timestamp: new Date().toISOString(),
         status: 'success',
@@ -392,11 +439,33 @@ export class PuppeteerAuditService {
         externalLinkCount: 0,
         headingStructure: {},
         brokenLinks: [],
+        
+        // Performance Metrics
+        fcpScore: 0,
+        lcpScore: 0,
+        clsScore: 0,
+        fidScore: 0,
+        loadTime: 0,
+        performanceMetrics: {},
+        
+        // Accessibility Data
+        accessibilityIssues: null,
+        accessibilityRecommendations: null,
+        accessibilityAudit: null,
+        
+        // Best Practices Data
+        bestPracticesIssues: null,
+        bestPracticesRecommendations: null,
+        bestPracticesAudit: null,
+        
+        // Overall Scores
         mobileScore: 0,
         performanceScore: 0,
         accessibilityScore: 0,
         seoScore: 0,
         bestPracticesScore: 0,
+        
+        // Audit Status
         url,
         timestamp: new Date().toISOString(),
         status: 'error',
@@ -617,7 +686,14 @@ export class PuppeteerAuditService {
         performanceScore,
         accessibilityScore,
         seoScore,
-        bestPracticesScore
+        bestPracticesScore,
+        // Include the raw metrics for storage
+        fcpScore: metrics.fcp,
+        lcpScore: metrics.lcp,
+        clsScore: 0, // CLS requires more complex measurement
+        fidScore: 0, // FID requires more complex measurement
+        loadTime: metrics.loadTime,
+        performanceMetrics: metrics
       }
     } catch (error) {
       console.error('Error calculating performance metrics:', error)

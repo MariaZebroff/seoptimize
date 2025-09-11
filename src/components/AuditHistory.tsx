@@ -2,16 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { getAuditHistory, deleteAudit } from "@/lib/supabaseAuth"
-import AuditScoreChart from "./AuditScoreChart"
-import AuditMetricsChart from "./AuditMetricsChart"
-import PDFReport from "./PDFReport"
-import EnhancedSEOResults from "./EnhancedSEOResults"
 
 interface AuditRecord {
   id: string
   url: string
   title: string
   meta_description: string
+  
+  // SEO Data
   h1_tags: string[]
   h2_tags: string[]
   h3_tags: string[]
@@ -44,11 +42,33 @@ interface AuditRecord {
     status: string
     duration: number
   }
+  
+  // Performance Metrics
+  fcp_score: number
+  lcp_score: number
+  cls_score: number
+  fid_score: number
+  load_time: number
+  performance_metrics: any
+  
+  // Accessibility Data
+  accessibility_issues: any
+  accessibility_recommendations: any
+  accessibility_audit: any
+  
+  // Best Practices Data
+  best_practices_issues: any
+  best_practices_recommendations: any
+  best_practices_audit: any
+  
+  // Overall Scores
   mobile_score: number
   performance_score: number
   accessibility_score: number
   seo_score: number
   best_practices_score: number
+  
+  // Audit Status
   status: 'success' | 'error'
   error_message?: string
   created_at: string
@@ -63,6 +83,7 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
   const [audits, setAudits] = useState<AuditRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [expandedAudit, setExpandedAudit] = useState<string | null>(null)
 
   useEffect(() => {
     // Add a small delay to ensure database has been updated
@@ -122,45 +143,38 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
     return 'bg-red-100'
   }
 
+  const calculateOverallScore = (audit: AuditRecord) => {
+    return Math.round((audit.performance_score + audit.seo_score + audit.accessibility_score + audit.best_practices_score) / 4)
+  }
+
+  const getOverallScoreColor = (score: number) => {
+    if (score >= 90) return 'text-green-600'
+    if (score >= 70) return 'text-yellow-600'
+    return 'text-red-600'
+  }
+
+  const getOverallScoreBgColor = (score: number) => {
+    if (score >= 90) return 'bg-green-100'
+    if (score >= 70) return 'bg-yellow-100'
+    return 'bg-red-100'
+  }
+
+  const toggleExpanded = (auditId: string) => {
+    setExpandedAudit(expandedAudit === auditId ? null : auditId)
+  }
+
   if (loading) {
     return (
-      <div className="space-y-6">
-        {/* PDF Report Loading */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Download PDF Report</h3>
-          <div className="animate-pulse">
-            <div className="h-20 bg-gray-200 rounded"></div>
-          </div>
-        </div>
-        
-        {/* Charts Loading */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
-            <div className="h-80 animate-pulse">
-              <div className="h-full bg-gray-200 rounded"></div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
-            <div className="h-80 animate-pulse">
-              <div className="h-full bg-gray-200 rounded"></div>
-            </div>
-          </div>
-        </div>
-        
-        {/* History Loading */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
-          <div className="animate-pulse">
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="border rounded-lg p-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
+        <div className="animate-pulse">
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="border rounded-lg p-4">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -169,139 +183,64 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
 
   if (error) {
     return (
-      <div className="space-y-6">
-        {/* PDF Report Error */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Download PDF Report</h3>
-          <div className="text-center text-gray-500 py-8">
-            Unable to load report data
-          </div>
-        </div>
-        
-        {/* Charts Error */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
-            <div className="text-center text-gray-500 py-8">
-              Unable to load chart data
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
-            <div className="text-center text-gray-500 py-8">
-              Unable to load metrics data
-            </div>
-          </div>
-        </div>
-        
-        {/* History Error */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
-          <div className="text-red-600">{error}</div>
-        </div>
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
+        <div className="text-red-600">{error}</div>
       </div>
     )
   }
 
   if (audits.length === 0) {
     return (
-      <div className="space-y-6">
-        {/* PDF Report Empty State */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Download PDF Report</h3>
-          <div className="text-center text-gray-500 py-8">
-            No audit data available for report generation
-          </div>
-        </div>
-        
-        {/* Charts Empty State */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
-            <div className="text-center text-gray-500 py-8">
-              No audit data available for charting
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
-            <div className="text-center text-gray-500 py-8">
-              No audit data available for metrics
-            </div>
-          </div>
-        </div>
-        
-        {/* History Empty State */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
-          <div className="text-gray-500 text-center py-8">
-            No audit history found. Run your first audit to see results here.
-          </div>
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
+        <div className="text-gray-500 text-center py-8">
+          No audit history found. Run your first audit to see results here.
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* PDF Report Section */}
-      <PDFReport 
-        auditData={audits} 
-        siteName={audits.length > 0 ? audits[0].url : undefined}
-        siteUrl={audits.length > 0 ? audits[0].url : undefined}
-      />
-      
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <AuditScoreChart 
-          auditData={audits} 
-          siteName={audits.length > 0 ? audits[0].url : undefined}
-        />
-        <AuditMetricsChart 
-          auditData={audits} 
-          siteName={audits.length > 0 ? audits[0].url : undefined}
-        />
+    <div className="bg-white shadow rounded-lg p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium text-gray-900">Audit History</h3>
+        <button
+          onClick={loadAuditHistory}
+          className="text-sm text-indigo-600 hover:text-indigo-500"
+        >
+          Refresh
+        </button>
       </div>
       
-      {/* Enhanced SEO Analysis Section */}
-      {audits.length > 0 && audits[0].status === 'success' && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Latest SEO Analysis</h3>
-          <EnhancedSEOResults auditData={audits[0]} />
-        </div>
-      )}
-
-      {/* Audit History Section */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Audit History</h3>
-          <button
-            onClick={loadAuditHistory}
-            className="text-sm text-indigo-600 hover:text-indigo-500"
-          >
-            Refresh
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          {audits.map((audit) => (
-            <div key={audit.id} className="border rounded-lg p-4 hover:bg-gray-50">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium text-gray-900">
-                      {audit.title || audit.url}
-                    </h4>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      audit.status === 'success' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {audit.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{audit.url}</p>
-                  <p className="text-xs text-gray-500">{formatDate(audit.created_at)}</p>
+      <div className="space-y-4">
+        {audits.map((audit) => (
+          <div key={audit.id} className="border rounded-lg p-4 hover:bg-gray-50">
+            {/* Header Section */}
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-medium text-gray-900">
+                    {audit.title || audit.url}
+                  </h4>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    audit.status === 'success' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {audit.status}
+                  </span>
                 </div>
+                <p className="text-sm text-gray-600 mb-2">{audit.url}</p>
+                <p className="text-xs text-gray-500">{formatDate(audit.created_at)}</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => toggleExpanded(audit.id)}
+                  className="text-sm text-indigo-600 hover:text-indigo-500"
+                >
+                  {expandedAudit === audit.id ? 'Collapse' : 'View Details'}
+                </button>
                 <button
                   onClick={() => handleDeleteAudit(audit.id)}
                   className="text-red-600 hover:text-red-800 text-sm"
@@ -310,56 +249,152 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
                   Delete
                 </button>
               </div>
-
-              {audit.status === 'success' ? (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.performance_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.performance_score)}`}>
-                      {audit.performance_score}
-                    </div>
-                    <div className="text-xs text-gray-600">Performance</div>
-                  </div>
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.seo_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.seo_score)}`}>
-                      {audit.seo_score}
-                    </div>
-                    <div className="text-xs text-gray-600">SEO</div>
-                  </div>
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.accessibility_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.accessibility_score)}`}>
-                      {audit.accessibility_score}
-                    </div>
-                    <div className="text-xs text-gray-600">Accessibility</div>
-                  </div>
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.best_practices_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.best_practices_score)}`}>
-                      {audit.best_practices_score}
-                    </div>
-                    <div className="text-xs text-gray-600">Best Practices</div>
-                  </div>
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.mobile_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.mobile_score)}`}>
-                      {audit.mobile_score}
-                    </div>
-                    <div className="text-xs text-gray-600">Mobile</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-red-600 text-sm">
-                  Error: {audit.error_message || 'Unknown error'}
-                </div>
-              )}
-
-              {audit.status === 'success' && audit.h1_tags && audit.h1_tags.length > 0 && (
-                <div className="mt-3 pt-3 border-t">
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">H1 Tags:</span> {audit.h1_tags.join(', ')}
-                  </div>
-                </div>
-              )}
             </div>
-          ))}
-        </div>
+
+            {/* Overall Score */}
+            {audit.status === 'success' && (
+              <div className="mb-4">
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getOverallScoreBgColor(calculateOverallScore(audit))}`}>
+                  <span className={`${getOverallScoreColor(calculateOverallScore(audit))}`}>
+                    Overall Score: {calculateOverallScore(audit)}/100
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Individual Scores */}
+            {audit.status === 'success' ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className={`text-center p-2 rounded ${getScoreBgColor(audit.performance_score)}`}>
+                  <div className={`text-sm font-medium ${getScoreColor(audit.performance_score)}`}>
+                    {audit.performance_score}
+                  </div>
+                  <div className="text-xs text-gray-600">Performance</div>
+                </div>
+                <div className={`text-center p-2 rounded ${getScoreBgColor(audit.seo_score)}`}>
+                  <div className={`text-sm font-medium ${getScoreColor(audit.seo_score)}`}>
+                    {audit.seo_score}
+                  </div>
+                  <div className="text-xs text-gray-600">SEO</div>
+                </div>
+                <div className={`text-center p-2 rounded ${getScoreBgColor(audit.accessibility_score)}`}>
+                  <div className={`text-sm font-medium ${getScoreColor(audit.accessibility_score)}`}>
+                    {audit.accessibility_score}
+                  </div>
+                  <div className="text-xs text-gray-600">Accessibility</div>
+                </div>
+                <div className={`text-center p-2 rounded ${getScoreBgColor(audit.best_practices_score)}`}>
+                  <div className={`text-sm font-medium ${getScoreColor(audit.best_practices_score)}`}>
+                    {audit.best_practices_score}
+                  </div>
+                  <div className="text-xs text-gray-600">Best Practices</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-red-600 text-sm mb-4">
+                Error: {audit.error_message || 'Unknown error'}
+              </div>
+            )}
+
+            {/* Expanded Details */}
+            {expandedAudit === audit.id && audit.status === 'success' && (
+              <div className="mt-4 pt-4 border-t space-y-4">
+                {/* SEO Data */}
+                <div>
+                  <h5 className="font-medium text-gray-900 mb-2">SEO Data</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Title:</span> {audit.title || 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Title Word Count:</span> {audit.title_word_count || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">Meta Description:</span> {audit.meta_description || 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Meta Description Word Count:</span> {audit.meta_description_word_count || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">H1 Tags:</span> {audit.h1_tags?.join(', ') || 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-medium">H1 Word Count:</span> {audit.h1_word_count || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">Total Images:</span> {audit.total_images || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">Images Missing Alt:</span> {audit.images_missing_alt || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">Total Links:</span> {audit.total_links || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">Internal Links:</span> {audit.internal_link_count || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">External Links:</span> {audit.external_link_count || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">Broken Links:</span> {audit.broken_links?.length || 0}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performance Metrics */}
+                <div>
+                  <h5 className="font-medium text-gray-900 mb-2">Performance Metrics</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">FCP Score:</span> {audit.fcp_score ? `${audit.fcp_score}ms` : 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-medium">LCP Score:</span> {audit.lcp_score ? `${audit.lcp_score}ms` : 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-medium">CLS Score:</span> {audit.cls_score || 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-medium">FID Score:</span> {audit.fid_score ? `${audit.fid_score}ms` : 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Load Time:</span> {audit.load_time ? `${audit.load_time}ms` : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Accessibility Data */}
+                <div>
+                  <h5 className="font-medium text-gray-900 mb-2">Accessibility Data</h5>
+                  <div className="text-sm text-gray-600">
+                    {audit.accessibility_issues ? (
+                      <div>
+                        <span className="font-medium">Issues Found:</span> {Array.isArray(audit.accessibility_issues) ? audit.accessibility_issues.length : 'N/A'}
+                      </div>
+                    ) : (
+                      <div>No detailed accessibility data available</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Best Practices Data */}
+                <div>
+                  <h5 className="font-medium text-gray-900 mb-2">Best Practices Data</h5>
+                  <div className="text-sm text-gray-600">
+                    {audit.best_practices_issues ? (
+                      <div>
+                        <span className="font-medium">Issues Found:</span> {Array.isArray(audit.best_practices_issues) ? audit.best_practices_issues.length : 'N/A'}
+                      </div>
+                    ) : (
+                      <div>No detailed best practices data available</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )
