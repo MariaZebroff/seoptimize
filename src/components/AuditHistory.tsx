@@ -36,7 +36,14 @@ interface AuditRecord {
   internal_link_count: number
   external_link_count: number
   heading_structure: any
-  broken_links: string[]
+  broken_links: Array<{url: string, text: string}>
+  broken_link_details?: any[]
+  broken_link_summary?: {
+    total: number
+    broken: number
+    status: string
+    duration: number
+  }
   mobile_score: number
   performance_score: number
   accessibility_score: number

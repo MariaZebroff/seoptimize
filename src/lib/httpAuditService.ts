@@ -27,7 +27,7 @@ export interface HttpAuditResult {
   internalLinkCount: number
   externalLinkCount: number
   headingStructure: any
-  brokenLinks: string[]
+  brokenLinks: Array<{url: string, text: string}>
   brokenLinkDetails?: any[]
   brokenLinkSummary?: {
     total: number
@@ -100,7 +100,7 @@ export class HttpAuditService {
       // Combine basic SEO data with broken link results
       const seoData = {
         ...basicSeoData,
-        brokenLinks: brokenLinkResult.brokenLinks.map(link => link.url).slice(0, 10), // Limit to first 10 URLs
+        brokenLinks: brokenLinkResult.brokenLinks.map(link => ({url: link.url, text: link.linkText})).slice(0, 10), // Limit to first 10 URLs
         brokenLinkDetails: brokenLinkResult.brokenLinks.slice(0, 20), // Keep detailed info for first 20
         brokenLinkSummary: {
           total: brokenLinkResult.totalLinks,
@@ -193,12 +193,12 @@ export class HttpAuditService {
     const metaDescriptionWordCount = countWords(metaDescription)
 
     // Extract all heading levels
-    const h1Matches = html.match(/<h1[^>]*>(.*?)<\/h1>/gis)
-    const h2Matches = html.match(/<h2[^>]*>(.*?)<\/h2>/gis)
-    const h3Matches = html.match(/<h3[^>]*>(.*?)<\/h3>/gis)
-    const h4Matches = html.match(/<h4[^>]*>(.*?)<\/h4>/gis)
-    const h5Matches = html.match(/<h5[^>]*>(.*?)<\/h5>/gis)
-    const h6Matches = html.match(/<h6[^>]*>(.*?)<\/h6>/gis)
+    const h1Matches = html.match(/<h1[^>]*>(.*?)<\/h1>/gi)
+    const h2Matches = html.match(/<h2[^>]*>(.*?)<\/h2>/gi)
+    const h3Matches = html.match(/<h3[^>]*>(.*?)<\/h3>/gi)
+    const h4Matches = html.match(/<h4[^>]*>(.*?)<\/h4>/gi)
+    const h5Matches = html.match(/<h5[^>]*>(.*?)<\/h5>/gi)
+    const h6Matches = html.match(/<h6[^>]*>(.*?)<\/h6>/gi)
 
     const h1Tags = extractHeadingText(h1Matches)
     const h2Tags = extractHeadingText(h2Matches)
@@ -238,7 +238,7 @@ export class HttpAuditService {
 
     // Extract and analyze links
     // Extract links with text content using improved regex
-    const linkRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gis
+    const linkRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi
     const internalLinks: Array<{url: string, text: string}> = []
     const externalLinks: Array<{url: string, text: string}> = []
     

@@ -11,7 +11,7 @@ interface AuditResult {
   title: string
   metaDescription: string
   h1Tags: string[]
-  brokenLinks: string[]
+  brokenLinks: Array<{url: string, text: string}>
   brokenLinkDetails?: Array<{
     url: string
     statusCode: number

@@ -12,6 +12,7 @@
     "@react-pdf/renderer": "^4.3.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.4",
+    "chrome-launcher": "^1.2.0",
     "clsx": "^2.1.1",
     "lighthouse": "^12.8.2",
     "next": "15.5.2",

@@ -62,7 +62,7 @@ export class BrokenLinkCheckerService {
       const links = this.extractLinksFromHTML(html, url)
       console.log(`📊 Found ${links.length} links to check`)
 
-      let totalLinks = links.length
+      const totalLinks = links.length
       let checkedCount = 0
 
       // Check each link
@@ -232,7 +232,7 @@ export class BrokenLinkCheckerService {
     const links: Array<{ url: string, tag: string, attribute: string, text: string }> = []
     
     // Extract links from <a> tags with improved regex to handle nested HTML
-    const linkRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gis
+    const linkRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi
     let match
     
     while ((match = linkRegex.exec(html)) !== null) {

@@ -32,7 +32,7 @@ interface AuditData {
   internal_link_count?: number
   external_link_count?: number
   heading_structure?: any
-  broken_links: string[]
+  broken_links: Array<{url: string, text: string}>
   mobile_score: number
   performance_score: number
   accessibility_score: number
@@ -394,7 +394,9 @@ const SEOAuditPDF: React.FC<PDFReportProps> = ({ auditData, siteName, siteUrl })
               {latestAudit.broken_links && latestAudit.broken_links.length > 0 ? (
                 <View style={styles.list}>
                   {latestAudit.broken_links.map((link, index) => (
-                    <Text key={index} style={[styles.listItem, { color: '#DC2626' }]}>• {link}</Text>
+                    <Text key={index} style={[styles.listItem, { color: '#DC2626' }]}>
+                      • {link.url} {link.text && `(${link.text})`}
+                    </Text>
                   ))}
                 </View>
               ) : (

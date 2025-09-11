@@ -18,7 +18,7 @@ interface AuditData {
   title: string
   meta_description: string
   h1_tags: string[]
-  broken_links: string[]
+  broken_links: Array<{url: string, text: string}>
   mobile_score: number
   performance_score: number
   accessibility_score: number

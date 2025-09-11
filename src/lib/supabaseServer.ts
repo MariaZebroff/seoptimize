@@ -82,6 +82,8 @@ export const saveAuditResultServer = async (auditResult: any, siteId?: string, u
       external_link_count: auditResult.externalLinkCount,
       heading_structure: auditResult.headingStructure,
       broken_links: auditResult.brokenLinks,
+      broken_link_details: auditResult.brokenLinkDetails,
+      broken_link_summary: auditResult.brokenLinkSummary,
       mobile_score: auditResult.mobileScore,
       performance_score: auditResult.performanceScore,
       accessibility_score: auditResult.accessibilityScore,

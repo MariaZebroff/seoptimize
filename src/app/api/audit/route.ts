@@ -29,7 +29,19 @@ export async function POST(request: NextRequest) {
   try {
     console.log('Audit API called')
     
-    const { url, siteId } = await request.json()
+    // Parse request body with error handling
+    let url: string
+    let siteId: string | undefined
+    
+    try {
+      const body = await request.json()
+      url = body.url
+      siteId = body.siteId
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError)
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+    
     console.log('URL received:', url)
     console.log('Site ID received:', siteId)
     

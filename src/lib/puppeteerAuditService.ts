@@ -1,6 +1,81 @@
 import puppeteer, { Browser, Page } from 'puppeteer'
 import { BrokenLinkCheckerService } from './brokenLinkChecker'
 
+// Conditional imports for Lighthouse (only when needed)
+let lighthouse: any = null
+let chromeLauncher: any = null
+
+// Function to dynamically import Lighthouse
+async function loadLighthouse() {
+  if (!lighthouse || !chromeLauncher) {
+    try {
+      lighthouse = (await import('lighthouse')).default
+      chromeLauncher = await import('chrome-launcher')
+    } catch (error) {
+      console.log('Failed to load Lighthouse:', error)
+      return false
+    }
+  }
+  return true
+}
+
+export interface DetailedMetrics {
+  fcp: number
+  lcp: number
+  cls: number
+  fid: number
+  loadTime: number
+  domContentLoaded: number
+  firstByte: number
+  totalBlockingTime: number
+  speedIndex: number
+}
+
+export interface AuditIssue {
+  id: string
+  title: string
+  description: string
+  score: number
+  category: 'performance' | 'accessibility' | 'best-practices' | 'seo'
+  severity: 'error' | 'warning' | 'info'
+  impact: 'high' | 'medium' | 'low'
+  recommendation: string
+  documentation?: string
+}
+
+export interface DetailedAuditResults {
+  performance: {
+    score: number
+    metrics: DetailedMetrics
+    issues: AuditIssue[]
+    opportunities: Array<{
+      id: string
+      title: string
+      description: string
+      score: number
+      savings: string
+    }>
+  }
+  accessibility: {
+    score: number
+    issues: AuditIssue[]
+    passedAudits: string[]
+    failedAudits: string[]
+  }
+  'best-practices': {
+    score: number
+    issues: AuditIssue[]
+    passedAudits: string[]
+    failedAudits: string[]
+  }
+  seo: {
+    score: number
+    issues: AuditIssue[]
+    passedAudits: string[]
+    failedAudits: string[]
+  }
+}
+
 export interface PuppeteerAuditResult {
   title: string
   metaDescription: string
@@ -28,7 +103,7 @@ export interface PuppeteerAuditResult {
   internalLinkCount: number
   externalLinkCount: number
   headingStructure: any
-  brokenLinks: string[]
+  brokenLinks: Array<{url: string, text: string}>
   brokenLinkDetails?: any[]
   brokenLinkSummary?: {
     total: number
@@ -45,6 +120,9 @@ export interface PuppeteerAuditResult {
   timestamp: string
   status: 'success' | 'error'
   error?: string
+  // New detailed audit results
+  detailedResults?: DetailedAuditResults
+  lighthouseResults?: any
 }
 
 export class PuppeteerAuditService {
@@ -157,12 +235,49 @@ export class PuppeteerAuditService {
       const performanceMetrics = await this.calculatePerformanceMetrics(page)
       console.log('Performance metrics calculated:', performanceMetrics)
 
+      // Run Lighthouse audit for detailed results (optional - don't let it break the main audit)
+      let lighthouseResults = null
+      let detailedResults = undefined
+      
+      // Check if Lighthouse should be enabled (can be disabled via environment variable)
+      const lighthouseEnabled = process.env.ENABLE_LIGHTHOUSE !== 'false'
+      
+      if (lighthouseEnabled) {
+        console.log('Attempting Lighthouse audit (optional)...')
+        
+        // Run Lighthouse in a separate try-catch to ensure it doesn't break the main audit
+        try {
+          // Add a timeout to prevent Lighthouse from hanging
+          const lighthousePromise = this.runLighthouseAudit(url)
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Lighthouse timeout')), 30000)
+          )
+          
+          lighthouseResults = await Promise.race([lighthousePromise, timeoutPromise])
+          
+          if (lighthouseResults) {
+            detailedResults = this.processLighthouseResults(lighthouseResults)
+            console.log('Lighthouse results processed successfully')
+          } else {
+            console.log('Lighthouse audit returned no results, continuing with basic audit')
+          }
+        } catch (lighthouseError) {
+          console.log('Lighthouse audit failed (this is optional):', lighthouseError instanceof Error ? lighthouseError.message : 'Unknown error')
+          console.log('Continuing with basic audit without Lighthouse data')
+          // Don't throw - just continue without Lighthouse data
+        }
+      } else {
+        console.log('Lighthouse audit disabled, using basic audit only')
+      }
+
       const result: PuppeteerAuditResult = {
         ...seoData,
         ...performanceMetrics,
         url,
         timestamp: new Date().toISOString(),
-        status: 'success'
+        status: 'success',
+        detailedResults,
+        lighthouseResults
       }
 
       console.log('Puppeteer audit completed successfully:', result)
@@ -381,7 +496,7 @@ export class PuppeteerAuditService {
     // Combine basic SEO data with broken link results
     return {
       ...basicSeoData,
-      brokenLinks: brokenLinkResult.brokenLinks.map(link => link.url).slice(0, 10), // Limit to first 10 URLs
+      brokenLinks: brokenLinkResult.brokenLinks.map(link => ({url: link.url, text: link.linkText})).slice(0, 10), // Limit to first 10 URLs
       brokenLinkDetails: brokenLinkResult.brokenLinks.slice(0, 20), // Keep detailed info for first 20
       brokenLinkSummary: {
         total: brokenLinkResult.totalLinks,
@@ -623,5 +738,233 @@ export class PuppeteerAuditService {
       console.error('Error calculating best practices score:', error)
       return 0
     }
+  }
+
+  private async runLighthouseAudit(url: string): Promise<any> {
+    let chrome: any = null
+    try {
+      console.log('Starting Lighthouse audit for:', url)
+      
+      // Try to load Lighthouse dynamically
+      const lighthouseLoaded = await loadLighthouse()
+      if (!lighthouseLoaded) {
+        console.log('Failed to load Lighthouse, skipping')
+        return null
+      }
+      
+      // Launch Chrome with proper flags
+      chrome = await chromeLauncher.launch({ 
+        chromeFlags: [
+          '--headless',
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding'
+        ]
+      })
+      
+      const options = {
+        logLevel: 'error' as const, // Reduce logging to prevent issues
+        output: 'json' as const,
+        onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
+        port: chrome.port,
+        disableStorageReset: true,
+        maxWaitForFcp: 15000,
+        maxWaitForLoad: 35000,
+        throttling: {
+          rttMs: 40,
+          throughputKbps: 10240,
+          cpuSlowdownMultiplier: 1,
+          requestLatencyMs: 0,
+          downloadThroughputKbps: 0,
+          uploadThroughputKbps: 0
+        }
+      }
+      
+      console.log('Running Lighthouse with options')
+      const runnerResult = await lighthouse(url, options)
+      
+      if (!runnerResult || !runnerResult.lhr) {
+        console.log('Lighthouse returned invalid result')
+        return null
+      }
+      
+      console.log('Lighthouse audit completed successfully')
+      return runnerResult.lhr
+    } catch (error) {
+      console.log('Lighthouse audit failed (expected in some environments):', error instanceof Error ? error.message : 'Unknown error')
+      return null
+    } finally {
+      if (chrome) {
+        try {
+          await chrome.kill()
+          console.log('Chrome process killed')
+        } catch (killError) {
+          console.log('Error killing Chrome process (non-critical):', killError)
+        }
+      }
+    }
+  }
+
+  private processLighthouseResults(lighthouseResults: any): DetailedAuditResults | undefined {
+    if (!lighthouseResults) return undefined
+
+    try {
+      const { audits, categories } = lighthouseResults
+
+      // Process performance metrics
+      const performanceMetrics: DetailedMetrics = {
+        fcp: audits['first-contentful-paint']?.numericValue || 0,
+        lcp: audits['largest-contentful-paint']?.numericValue || 0,
+        cls: audits['cumulative-layout-shift']?.numericValue || 0,
+        fid: audits['max-potential-fid']?.numericValue || 0,
+        loadTime: audits['load-fast-3g']?.numericValue || 0,
+        domContentLoaded: audits['dom-content-loaded']?.numericValue || 0,
+        firstByte: audits['server-response-time']?.numericValue || 0,
+        totalBlockingTime: audits['total-blocking-time']?.numericValue || 0,
+        speedIndex: audits['speed-index']?.numericValue || 0,
+      }
+
+      // Process performance issues and opportunities
+      const performanceIssues = this.extractAuditIssues(audits, 'performance')
+      const performanceOpportunities = this.extractOpportunities(audits, 'performance')
+
+      // Process accessibility issues
+      const accessibilityIssues = this.extractAuditIssues(audits, 'accessibility')
+      const accessibilityPassed = this.extractPassedAudits(audits, 'accessibility')
+      const accessibilityFailed = this.extractFailedAudits(audits, 'accessibility')
+
+      // Process best practices issues
+      const bestPracticesIssues = this.extractAuditIssues(audits, 'best-practices')
+      const bestPracticesPassed = this.extractPassedAudits(audits, 'best-practices')
+      const bestPracticesFailed = this.extractFailedAudits(audits, 'best-practices')
+
+      // Process SEO issues
+      const seoIssues = this.extractAuditIssues(audits, 'seo')
+      const seoPassed = this.extractPassedAudits(audits, 'seo')
+      const seoFailed = this.extractFailedAudits(audits, 'seo')
+
+      return {
+        performance: {
+          score: Math.round(categories.performance?.score * 100) || 0,
+          metrics: performanceMetrics,
+          issues: performanceIssues,
+          opportunities: performanceOpportunities
+        },
+        accessibility: {
+          score: Math.round(categories.accessibility?.score * 100) || 0,
+          issues: accessibilityIssues,
+          passedAudits: accessibilityPassed,
+          failedAudits: accessibilityFailed
+        },
+        'best-practices': {
+          score: Math.round(categories['best-practices']?.score * 100) || 0,
+          issues: bestPracticesIssues,
+          passedAudits: bestPracticesPassed,
+          failedAudits: bestPracticesFailed
+        },
+        seo: {
+          score: Math.round(categories.seo?.score * 100) || 0,
+          issues: seoIssues,
+          passedAudits: seoPassed,
+          failedAudits: seoFailed
+        }
+      }
+    } catch (error) {
+      console.error('Error processing Lighthouse results:', error)
+      return undefined
+    }
+  }
+
+  private extractAuditIssues(audits: any, category: string): AuditIssue[] {
+    const issues: AuditIssue[] = []
+    
+    Object.entries(audits).forEach(([id, audit]: [string, any]) => {
+      if (audit && audit.score !== null && audit.score < 1 && this.isCategoryAudit(id, category)) {
+        const severity = audit.score === 0 ? 'error' : audit.score < 0.5 ? 'warning' : 'info'
+        const impact = audit.score === 0 ? 'high' : audit.score < 0.5 ? 'medium' : 'low'
+        
+        issues.push({
+          id,
+          title: audit.title || id,
+          description: audit.description || '',
+          score: Math.round(audit.score * 100),
+          category: category as any,
+          severity,
+          impact,
+          recommendation: audit.explanation || audit.title || 'Review this issue',
+          documentation: audit.documentation?.[0]?.url
+        })
+      }
+    })
+    
+    return issues.sort((a, b) => a.score - b.score)
+  }
+
+  private extractOpportunities(audits: any, category: string): Array<{id: string, title: string, description: string, score: number, savings: string}> {
+    const opportunities: Array<{id: string, title: string, description: string, score: number, savings: string}> = []
+    
+    Object.entries(audits).forEach(([id, audit]: [string, any]) => {
+      if (audit && audit.details && audit.details.type === 'opportunity' && this.isCategoryAudit(id, category)) {
+        opportunities.push({
+          id,
+          title: audit.title || id,
+          description: audit.description || '',
+          score: Math.round((audit.score || 0) * 100),
+          savings: audit.displayValue || 'Potential savings available'
+        })
+      }
+    })
+    
+    return opportunities.sort((a, b) => b.score - a.score)
+  }
+
+  private extractPassedAudits(audits: any, category: string): string[] {
+    return Object.entries(audits)
+      .filter(([id, audit]: [string, any]) => 
+        audit && audit.score === 1 && this.isCategoryAudit(id, category)
+      )
+      .map(([id]) => id)
+  }
+
+  private extractFailedAudits(audits: any, category: string): string[] {
+    return Object.entries(audits)
+      .filter(([id, audit]: [string, any]) => 
+        audit && audit.score !== null && audit.score < 1 && this.isCategoryAudit(id, category)
+      )
+      .map(([id]) => id)
+  }
+
+  private isCategoryAudit(auditId: string, category: string): boolean {
+    // This is a simplified mapping - in a real implementation, you'd want to use
+    // Lighthouse's actual audit categorization
+    const categoryMappings = {
+      performance: [
+        'first-contentful-paint', 'largest-contentful-paint', 'cumulative-layout-shift',
+        'max-potential-fid', 'speed-index', 'total-blocking-time', 'server-response-time',
+        'render-blocking-resources', 'unused-css-rules', 'unused-javascript',
+        'modern-image-formats', 'efficient-animated-content', 'preload-lcp-image'
+      ],
+      accessibility: [
+        'color-contrast', 'image-alt', 'label', 'link-name', 'button-name',
+        'form-field-multiple-labels', 'heading-order', 'html-has-lang',
+        'html-lang-valid', 'input-image-alt', 'label-content-name-mismatch'
+      ],
+      'best-practices': [
+        'is-on-https', 'uses-http2', 'no-vulnerable-libraries', 'notification-on-start',
+        'deprecations', 'console-errors', 'csp-xss', 'errors-in-console'
+      ],
+      seo: [
+        'meta-description', 'document-title', 'link-text', 'crawlable-anchors',
+        'is-crawlable', 'robots-txt', 'hreflang', 'canonical', 'font-display'
+      ]
+    }
+    
+    return categoryMappings[category as keyof typeof categoryMappings]?.includes(auditId) || false
   }
 }

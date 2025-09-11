@@ -21,7 +21,7 @@ interface AuditData {
   title: string
   meta_description: string
   h1_tags: string[]
-  broken_links: string[]
+  broken_links: Array<{url: string, text: string}>
   mobile_score: number
   performance_score: number
   accessibility_score: number
@@ -145,7 +145,7 @@ const AuditMetricsChart: React.FC<AuditMetricsChartProps> = ({ auditData, siteNa
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
+                  label={({ name, value }) => `${name}: ${value}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"

@@ -17,7 +17,7 @@ interface AuditResult {
   title: string
   metaDescription: string
   h1Tags: string[]
-  brokenLinks: string[]
+  brokenLinks: Array<{url: string, text: string}>
   mobileScore: number
   performanceScore: number
   accessibilityScore: number

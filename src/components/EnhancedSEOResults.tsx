@@ -30,9 +30,9 @@ interface EnhancedSEOData {
   internal_link_count: number | null
   external_link_count: number | null
   heading_structure: any
-  broken_links: string[] | null
-  brokenLinkDetails?: any[]
-  brokenLinkSummary?: {
+  broken_links: Array<{url: string, text: string}> | null
+  broken_link_details?: any[]
+  broken_link_summary?: {
     total: number
     broken: number
     status: string
@@ -403,31 +403,31 @@ const EnhancedSEOResults: React.FC<EnhancedSEOResultsProps> = ({ auditData }) =>
                 <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
                   <span className="mr-2">⚠️</span>
                   Broken Links ({auditData.broken_links.length})
-                  {auditData.brokenLinkSummary && (
+                  {auditData.broken_link_summary && (
                     <span className="ml-2 text-sm text-gray-500">
-                      ({auditData.brokenLinkSummary.broken} of {auditData.brokenLinkSummary.total} total links)
+                      ({auditData.broken_link_summary.broken} of {auditData.broken_link_summary.total} total links)
                     </span>
                   )}
                 </h3>
                 
                 {/* Summary Stats */}
-                {auditData.brokenLinkSummary && (
+                {auditData.broken_link_summary && (
                   <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <div className="font-medium text-gray-900">{auditData.brokenLinkSummary.total}</div>
+                        <div className="font-medium text-gray-900">{auditData.broken_link_summary.total}</div>
                         <div className="text-gray-600">Total Links</div>
                       </div>
                       <div>
-                        <div className="font-medium text-red-600">{auditData.brokenLinkSummary.broken}</div>
+                        <div className="font-medium text-red-600">{auditData.broken_link_summary.broken}</div>
                         <div className="text-gray-600">Broken</div>
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{auditData.brokenLinkSummary.status}</div>
+                        <div className="font-medium text-gray-900">{auditData.broken_link_summary.status}</div>
                         <div className="text-gray-600">Status</div>
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{auditData.brokenLinkSummary.duration}ms</div>
+                        <div className="font-medium text-gray-900">{auditData.broken_link_summary.duration}ms</div>
                         <div className="text-gray-600">Duration</div>
                       </div>
                     </div>
@@ -435,7 +435,7 @@ const EnhancedSEOResults: React.FC<EnhancedSEOResultsProps> = ({ auditData }) =>
                 )}
 
                 <div className="max-h-60 overflow-y-auto">
-                  {auditData.brokenLinkDetails && auditData.brokenLinkDetails.length > 0 ? (
+                  {auditData.broken_link_details && auditData.broken_link_details.length > 0 ? (
                     // Show detailed broken link information in table format
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
@@ -459,7 +459,7 @@ const EnhancedSEOResults: React.FC<EnhancedSEOResultsProps> = ({ auditData }) =>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {auditData.brokenLinkDetails.map((link, index) => (
+                          {auditData.broken_link_details.map((link, index) => (
                             <tr key={index} className="hover:bg-gray-50">
                               <td className="px-3 py-2 text-xs text-gray-900 max-w-xs">
                                 <div className="truncate font-mono" title={link.url}>
@@ -494,9 +494,18 @@ const EnhancedSEOResults: React.FC<EnhancedSEOResultsProps> = ({ auditData }) =>
                   ) : (
                     // Fallback to simple broken link list
                     <div className="space-y-2">
+                      <div className="text-xs text-gray-500 mb-2 italic">
+                        Basic broken link list (detailed status information not available)
+                      </div>
                       {auditData.broken_links.map((link, index) => (
                         <div key={index} className="bg-red-50 border border-red-200 rounded p-3 text-sm">
-                          <div className="font-mono text-xs text-red-700 break-all">{link}</div>
+                          <div className="font-mono text-xs text-red-700 break-all">{link.url}</div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            <strong>Link Text:</strong> {link.text || <span className="text-gray-400 italic">No text</span>}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Status: Unknown
+                          </div>
                         </div>
                       ))}
                     </div>
