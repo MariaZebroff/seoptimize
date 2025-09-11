@@ -5,18 +5,97 @@ import { BrokenLinkCheckerService } from './brokenLinkChecker'
 let lighthouse: any = null
 let chromeLauncher: any = null
 
-// Function to dynamically import Lighthouse
-async function loadLighthouse() {
-  if (!lighthouse || !chromeLauncher) {
-    try {
-      lighthouse = (await import('lighthouse')).default
-      chromeLauncher = await import('chrome-launcher')
-    } catch (error) {
-      console.log('Failed to load Lighthouse:', error)
-      return false
+// Function to run Lighthouse in a child process
+async function runLighthouseInChildProcess(url: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const { spawn } = require('child_process')
+    const path = require('path')
+    
+    // Create a temporary script to run Lighthouse
+    const scriptPath = path.join(process.cwd(), 'lighthouse-script.js')
+    const fs = require('fs')
+    
+    const lighthouseScript = `
+const lighthouse = require('lighthouse').default || require('lighthouse')
+const chromeLauncher = require('chrome-launcher')
+
+async function runLighthouse() {
+  let chrome = null
+  try {
+    chrome = await chromeLauncher.launch({
+      chromeFlags: [
+        '--headless',
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-web-security'
+      ]
+    })
+    
+    const options = {
+      logLevel: 'error',
+      output: 'json',
+      onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
+      port: chrome.port
+    }
+    
+    const result = await lighthouse('${url}', options)
+    console.log(JSON.stringify(result.lhr))
+  } catch (error) {
+    console.error('Lighthouse error:', error.message)
+    process.exit(1)
+  } finally {
+    if (chrome) {
+      await chrome.kill()
     }
   }
-  return true
+}
+
+runLighthouse()
+`
+    
+    fs.writeFileSync(scriptPath, lighthouseScript)
+    
+    const child = spawn('node', [scriptPath], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+    
+    let output = ''
+    let errorOutput = ''
+    
+    child.stdout.on('data', (data: Buffer) => {
+      output += data.toString()
+    })
+    
+    child.stderr.on('data', (data: Buffer) => {
+      errorOutput += data.toString()
+    })
+    
+    child.on('close', (code: number) => {
+      // Clean up the temporary script
+      try {
+        fs.unlinkSync(scriptPath)
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+      
+      if (code === 0 && output) {
+        try {
+          const result = JSON.parse(output)
+          resolve(result)
+        } catch (parseError) {
+          reject(new Error('Failed to parse Lighthouse output'))
+        }
+      } else {
+        reject(new Error(errorOutput || 'Lighthouse process failed'))
+      }
+    })
+    
+    child.on('error', (error: Error) => {
+      reject(error)
+    })
+  })
 }
 
 export interface DetailedMetrics {
@@ -741,73 +820,22 @@ export class PuppeteerAuditService {
   }
 
   private async runLighthouseAudit(url: string): Promise<any> {
-    let chrome: any = null
     try {
       console.log('Starting Lighthouse audit for:', url)
       
-      // Try to load Lighthouse dynamically
-      const lighthouseLoaded = await loadLighthouse()
-      if (!lighthouseLoaded) {
-        console.log('Failed to load Lighthouse, skipping')
-        return null
-      }
+      // Run Lighthouse in a child process to avoid Next.js compatibility issues
+      const result = await runLighthouseInChildProcess(url)
       
-      // Launch Chrome with proper flags
-      chrome = await chromeLauncher.launch({ 
-        chromeFlags: [
-          '--headless',
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding'
-        ]
-      })
-      
-      const options = {
-        logLevel: 'error' as const, // Reduce logging to prevent issues
-        output: 'json' as const,
-        onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
-        port: chrome.port,
-        disableStorageReset: true,
-        maxWaitForFcp: 15000,
-        maxWaitForLoad: 35000,
-        throttling: {
-          rttMs: 40,
-          throughputKbps: 10240,
-          cpuSlowdownMultiplier: 1,
-          requestLatencyMs: 0,
-          downloadThroughputKbps: 0,
-          uploadThroughputKbps: 0
-        }
-      }
-      
-      console.log('Running Lighthouse with options')
-      const runnerResult = await lighthouse(url, options)
-      
-      if (!runnerResult || !runnerResult.lhr) {
-        console.log('Lighthouse returned invalid result')
+      if (!result) {
+        console.log('Lighthouse returned no result')
         return null
       }
       
       console.log('Lighthouse audit completed successfully')
-      return runnerResult.lhr
+      return result
     } catch (error) {
       console.log('Lighthouse audit failed (expected in some environments):', error instanceof Error ? error.message : 'Unknown error')
       return null
-    } finally {
-      if (chrome) {
-        try {
-          await chrome.kill()
-          console.log('Chrome process killed')
-        } catch (killError) {
-          console.log('Error killing Chrome process (non-critical):', killError)
-        }
-      }
     }
   }
 
