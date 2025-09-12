@@ -17,6 +17,14 @@ export interface SEOAnalysisResult {
   contentWordCount: number
   contentCharacterCount: number
   
+  // Heading Word Counts
+  h1WordCount: number
+  h2WordCount: number
+  h3WordCount: number
+  h4WordCount: number
+  h5WordCount: number
+  h6WordCount: number
+  
   // Advanced SEO Metrics
   keywordDensity: { [key: string]: number }
   headingStructure: {
@@ -164,7 +172,13 @@ export class EnhancedSEOAnalysis {
       h5Tags: extractedData.h5Tags || [],
       h6Tags: extractedData.h6Tags || [],
       titleWordCount: extractedData.titleWordCount || 0,
-      metaDescriptionWordCount: extractedData.metaDescriptionWordCount || 0
+      metaDescriptionWordCount: extractedData.metaDescriptionWordCount || 0,
+      h1WordCount: extractedData.h1WordCount || 0,
+      h2WordCount: extractedData.h2WordCount || 0,
+      h3WordCount: extractedData.h3WordCount || 0,
+      h4WordCount: extractedData.h4WordCount || 0,
+      h5WordCount: extractedData.h5WordCount || 0,
+      h6WordCount: extractedData.h6WordCount || 0
     }
   }
 
@@ -208,6 +222,14 @@ export class EnhancedSEOAnalysis {
     const h5Tags = extractHeadingText(h5Matches)
     const h6Tags = extractHeadingText(h6Matches)
 
+    // Calculate word counts for each heading level
+    const h1WordCount = h1Tags.reduce((total, text) => total + countWords(text), 0)
+    const h2WordCount = h2Tags.reduce((total, text) => total + countWords(text), 0)
+    const h3WordCount = h3Tags.reduce((total, text) => total + countWords(text), 0)
+    const h4WordCount = h4Tags.reduce((total, text) => total + countWords(text), 0)
+    const h5WordCount = h5Tags.reduce((total, text) => total + countWords(text), 0)
+    const h6WordCount = h6Tags.reduce((total, text) => total + countWords(text), 0)
+
     return {
       title,
       metaDescription,
@@ -218,7 +240,13 @@ export class EnhancedSEOAnalysis {
       h5Tags,
       h6Tags,
       titleWordCount,
-      metaDescriptionWordCount
+      metaDescriptionWordCount,
+      h1WordCount,
+      h2WordCount,
+      h3WordCount,
+      h4WordCount,
+      h5WordCount,
+      h6WordCount
     }
   }
 
@@ -240,7 +268,13 @@ export class EnhancedSEOAnalysis {
       metaDescriptionCharacterCount,
       metaDescriptionWordCount: basicData.metaDescriptionWordCount,
       contentWordCount,
-      contentCharacterCount
+      contentCharacterCount,
+      h1WordCount: basicData.h1WordCount,
+      h2WordCount: basicData.h2WordCount,
+      h3WordCount: basicData.h3WordCount,
+      h4WordCount: basicData.h4WordCount,
+      h5WordCount: basicData.h5WordCount,
+      h6WordCount: basicData.h6WordCount
     }
   }
 

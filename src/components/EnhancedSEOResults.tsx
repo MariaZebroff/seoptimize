@@ -60,7 +60,13 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
     h3Tags: analysis.h3Tags || [],
     h4Tags: analysis.h4Tags || [],
     h5Tags: analysis.h5Tags || [],
-    h6Tags: analysis.h6Tags || []
+    h6Tags: analysis.h6Tags || [],
+    h1WordCount: analysis.h1WordCount || 0,
+    h2WordCount: analysis.h2WordCount || 0,
+    h3WordCount: analysis.h3WordCount || 0,
+    h4WordCount: analysis.h4WordCount || 0,
+    h5WordCount: analysis.h5WordCount || 0,
+    h6WordCount: analysis.h6WordCount || 0
   }
 
   const getScoreColor = (score: number) => {
@@ -304,20 +310,268 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
 
   const renderDetails = () => (
           <div className="space-y-6">
-      {/* Meta Tags */}
+      {/* Meta Tags Analysis */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Meta Tags</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(safeAnalysis.metaTags).map(([key, value]) => (
-            <div key={key} className="border rounded-lg p-3">
-              <div className="text-sm font-medium text-gray-500 mb-1">{key}</div>
-              <div className="text-sm text-gray-900 break-all">
-                {value || <span className="text-gray-400 italic">Not set</span>}
-              </div>
-            </div>
-          ))}
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Meta Tags Analysis</h3>
+        <div className="space-y-6">
+          
+          {/* Basic Meta Tags */}
+          <div>
+            <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Basic Meta Tags
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: 'title', label: 'Page Title', value: safeAnalysis.metaTags.title || safeAnalysis.title },
+                { key: 'description', label: 'Meta Description', value: safeAnalysis.metaTags.description || safeAnalysis.metaDescription },
+                { key: 'keywords', label: 'Keywords', value: safeAnalysis.metaTags.keywords },
+                { key: 'author', label: 'Author', value: safeAnalysis.metaTags.author },
+                { key: 'robots', label: 'Robots', value: safeAnalysis.metaTags.robots },
+                { key: 'viewport', label: 'Viewport', value: safeAnalysis.metaTags.viewport },
+                { key: 'charset', label: 'Charset', value: safeAnalysis.metaTags.charset },
+                { key: 'canonical', label: 'Canonical URL', value: safeAnalysis.metaTags.canonical }
+              ].map(({ key, label, value }) => (
+                <div key={key} className="border rounded-lg p-4">
+                  <div className="text-sm font-medium text-gray-600 mb-2">{label}</div>
+                  <div className="text-sm text-gray-900 break-all">
+                    {value ? (
+                      <div className="bg-green-50 p-2 rounded border-l-4 border-green-400">
+                        {value}
+                      </div>
+                    ) : (
+                      <div className="bg-red-50 p-2 rounded border-l-4 border-red-400 text-red-600 italic">
+                        Not set
+                      </div>
+                    )}
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Open Graph Tags */}
+          <div>
+            <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+              </svg>
+              Open Graph Tags (Social Media)
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: 'ogTitle', label: 'OG Title', value: safeAnalysis.metaTags.ogTitle },
+                { key: 'ogDescription', label: 'OG Description', value: safeAnalysis.metaTags.ogDescription },
+                { key: 'ogImage', label: 'OG Image', value: safeAnalysis.metaTags.ogImage }
+              ].map(({ key, label, value }) => (
+                <div key={key} className="border rounded-lg p-4">
+                  <div className="text-sm font-medium text-gray-600 mb-2">{label}</div>
+                  <div className="text-sm text-gray-900 break-all">
+                    {value ? (
+                      <div className="bg-purple-50 p-2 rounded border-l-4 border-purple-400">
+                        {value}
+                      </div>
+                    ) : (
+                      <div className="bg-red-50 p-2 rounded border-l-4 border-red-400 text-red-600 italic">
+                        Not set
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+              <div className="text-sm text-blue-800">
+                <strong>💡 Open Graph Tip:</strong> These tags control how your page appears when shared on Facebook, LinkedIn, and other social platforms.
+              </div>
+            </div>
+          </div>
+
+          {/* Twitter Card Tags */}
+          <div>
+            <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+              </svg>
+              Twitter Card Tags
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: 'twitterCard', label: 'Twitter Card Type', value: safeAnalysis.metaTags.twitterCard },
+                { key: 'twitterTitle', label: 'Twitter Title', value: safeAnalysis.metaTags.twitterTitle },
+                { key: 'twitterDescription', label: 'Twitter Description', value: safeAnalysis.metaTags.twitterDescription },
+                { key: 'twitterImage', label: 'Twitter Image', value: safeAnalysis.metaTags.twitterImage }
+              ].map(({ key, label, value }) => (
+                <div key={key} className="border rounded-lg p-4">
+                  <div className="text-sm font-medium text-gray-600 mb-2">{label}</div>
+                  <div className="text-sm text-gray-900 break-all">
+                    {value ? (
+                      <div className="bg-blue-50 p-2 rounded border-l-4 border-blue-400">
+                        {value}
+                      </div>
+                    ) : (
+                      <div className="bg-red-50 p-2 rounded border-l-4 border-red-400 text-red-600 italic">
+                        Not set
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+              <div className="text-sm text-blue-800">
+                <strong>🐦 Twitter Tip:</strong> These tags control how your page appears when shared on Twitter/X. If not set, Twitter will fall back to Open Graph tags.
+              </div>
+            </div>
+          </div>
+
+          {/* Meta Tags Summary */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-medium text-gray-900 mb-3">📊 Meta Tags Summary</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">
+                  {Object.values(safeAnalysis.metaTags).filter(value => value && value !== '').length}
+                </div>
+                <div className="text-gray-600">Tags Set</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-red-600">
+                  {Object.values(safeAnalysis.metaTags).filter(value => !value || value === '').length}
+                </div>
+                <div className="text-gray-600">Missing</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600">
+                  {safeAnalysis.metaTags.ogTitle && safeAnalysis.metaTags.ogDescription && safeAnalysis.metaTags.ogImage ? '3' : '0'}
+                </div>
+                <div className="text-gray-600">OG Complete</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-purple-600">
+                  {safeAnalysis.metaTags.twitterCard && safeAnalysis.metaTags.twitterTitle ? '2' : '0'}
+                </div>
+                <div className="text-gray-600">Twitter Set</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Meta Description Details */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Meta Description Details</h3>
+        <div className="space-y-4">
+          {/* Character Count Analysis */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="text-sm font-medium text-blue-600 mb-1">Character Count</div>
+              <div className="text-2xl font-bold text-blue-800">{safeAnalysis.metaDescriptionCharacterCount}</div>
+              <div className="text-xs text-blue-600 mt-1">characters</div>
+            </div>
+            
+            <div className="bg-green-50 rounded-lg p-4">
+              <div className="text-sm font-medium text-green-600 mb-1">Optimal Range</div>
+              <div className="text-lg font-bold text-green-800">120-160</div>
+              <div className="text-xs text-green-600 mt-1">characters</div>
+            </div>
+            
+            <div className={`rounded-lg p-4 ${
+              safeAnalysis.metaDescriptionCharacterCount >= 120 && safeAnalysis.metaDescriptionCharacterCount <= 160 
+                ? 'bg-green-50' 
+                : safeAnalysis.metaDescriptionCharacterCount < 120 
+                  ? 'bg-yellow-50' 
+                  : 'bg-red-50'
+            }`}>
+              <div className={`text-sm font-medium mb-1 ${
+                safeAnalysis.metaDescriptionCharacterCount >= 120 && safeAnalysis.metaDescriptionCharacterCount <= 160 
+                  ? 'text-green-600' 
+                  : safeAnalysis.metaDescriptionCharacterCount < 120 
+                    ? 'text-yellow-600' 
+                    : 'text-red-600'
+              }`}>Status</div>
+              <div className={`text-lg font-bold ${
+                safeAnalysis.metaDescriptionCharacterCount >= 120 && safeAnalysis.metaDescriptionCharacterCount <= 160 
+                  ? 'text-green-800' 
+                  : safeAnalysis.metaDescriptionCharacterCount < 120 
+                    ? 'text-yellow-800' 
+                    : 'text-red-800'
+              }`}>
+                {safeAnalysis.metaDescriptionCharacterCount >= 120 && safeAnalysis.metaDescriptionCharacterCount <= 160 
+                  ? 'Optimal' 
+                  : safeAnalysis.metaDescriptionCharacterCount < 120 
+                    ? 'Too Short' 
+                    : 'Too Long'}
+              </div>
+              <div className={`text-xs mt-1 ${
+                safeAnalysis.metaDescriptionCharacterCount >= 120 && safeAnalysis.metaDescriptionCharacterCount <= 160 
+                  ? 'text-green-600' 
+                  : safeAnalysis.metaDescriptionCharacterCount < 120 
+                    ? 'text-yellow-600' 
+                    : 'text-red-600'
+              }`}>
+                {safeAnalysis.metaDescriptionCharacterCount < 120 
+                  ? `Add ${120 - safeAnalysis.metaDescriptionCharacterCount} more characters`
+                  : safeAnalysis.metaDescriptionCharacterCount > 160 
+                    ? `Remove ${safeAnalysis.metaDescriptionCharacterCount - 160} characters`
+                    : 'Perfect length for search results'}
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>0</span>
+              <span>120 (Min)</span>
+              <span>160 (Max)</span>
+              <span>320</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div 
+                className={`h-3 rounded-full transition-all duration-500 ${
+                  safeAnalysis.metaDescriptionCharacterCount >= 120 && safeAnalysis.metaDescriptionCharacterCount <= 160 
+                    ? 'bg-green-500' 
+                    : safeAnalysis.metaDescriptionCharacterCount < 120 
+                      ? 'bg-yellow-500' 
+                      : 'bg-red-500'
+                }`}
+                style={{ 
+                  width: `${Math.min(100, (safeAnalysis.metaDescriptionCharacterCount / 320) * 100)}%` 
+                }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Actual Meta Description Text */}
+          <div className="border rounded-lg p-4">
+            <div className="text-sm font-medium text-gray-700 mb-2">Current Meta Description:</div>
+            {safeAnalysis.metaDescription ? (
+              <div className="text-sm text-gray-900 bg-gray-50 p-3 rounded border-l-4 border-blue-400">
+                "{safeAnalysis.metaDescription}"
+              </div>
+            ) : (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded border-l-4 border-red-400">
+                ⚠️ No meta description found
+              </div>
+            )}
+          </div>
+
+          {/* SEO Tips */}
+          <div className="bg-blue-50 rounded-lg p-4">
+            <h4 className="font-medium text-blue-900 mb-2">💡 SEO Tips for Meta Description:</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Include your target keyword naturally</li>
+              <li>• Write compelling copy that encourages clicks</li>
+              <li>• Use action words and emotional triggers</li>
+              <li>• Make it unique for each page</li>
+              <li>• Avoid duplicate meta descriptions</li>
+            </ul>
+          </div>
+        </div>
+      </div>
 
       {/* Content Analysis */}
       <div className="bg-white rounded-lg shadow p-6">
@@ -337,30 +591,55 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
       {/* Headings */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Headings</h3>
-        <div className="space-y-4">
+        <div className="space-y-6">
           {[
-            { level: 'H1', tags: safeAnalysis.h1Tags },
-            { level: 'H2', tags: safeAnalysis.h2Tags },
-            { level: 'H3', tags: safeAnalysis.h3Tags },
-            { level: 'H4', tags: safeAnalysis.h4Tags },
-            { level: 'H5', tags: safeAnalysis.h5Tags },
-            { level: 'H6', tags: safeAnalysis.h6Tags }
-          ].map(({ level, tags }) => (
-            <div key={level}>
-              <h4 className="font-medium text-gray-900 mb-2">{level} Tags ({tags.length})</h4>
-              {tags.length > 0 ? (
-                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-                  {tags.map((tag, index) => (
-                    <li key={index}>{tag}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-gray-400 italic">No {level} tags found</p>
-              )}
-                        </div>
-                      ))}
+            { level: 'H1', tags: safeAnalysis.h1Tags, wordCount: safeAnalysis.h1WordCount },
+            { level: 'H2', tags: safeAnalysis.h2Tags, wordCount: safeAnalysis.h2WordCount },
+            { level: 'H3', tags: safeAnalysis.h3Tags, wordCount: safeAnalysis.h3WordCount },
+            { level: 'H4', tags: safeAnalysis.h4Tags, wordCount: safeAnalysis.h4WordCount },
+            { level: 'H5', tags: safeAnalysis.h5Tags, wordCount: safeAnalysis.h5WordCount },
+            { level: 'H6', tags: safeAnalysis.h6Tags, wordCount: safeAnalysis.h6WordCount }
+          ].map(({ level, tags, wordCount }) => {
+            // Calculate character count for all tags of this level
+            const characterCount = tags.reduce((total, tag) => total + tag.length, 0)
+            
+            return (
+              <div key={level} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">{level} Tags ({tags.length})</h4>
+                  <div className="flex space-x-4 text-sm text-gray-600">
+                    <div className="flex items-center">
+                      <span className="font-medium text-blue-600">{wordCount}</span>
+                      <span className="ml-1">words</span>
                     </div>
+                    <div className="flex items-center">
+                      <span className="font-medium text-green-600">{characterCount}</span>
+                      <span className="ml-1">characters</span>
+                    </div>
+                  </div>
                 </div>
+                
+                {tags.length > 0 ? (
+                  <div className="space-y-2">
+                    {tags.map((tag, index) => (
+                      <div key={index} className="bg-gray-50 rounded p-3 border-l-4 border-blue-400">
+                        <div className="text-sm text-gray-900 font-medium mb-1">{tag}</div>
+                        <div className="text-xs text-gray-500">
+                          {tag.split(/\s+/).filter(word => word.length > 0).length} words • {tag.length} characters
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-400 italic">No {level} tags found</p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
               </div>
   )
 
