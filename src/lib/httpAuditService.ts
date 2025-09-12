@@ -52,119 +52,154 @@ export class HttpAuditService {
   }
 
   async auditWebsite(url: string): Promise<HttpAuditResult> {
-    try {
-      console.log('Starting HTTP audit for URL:', url)
-      
-      // Validate URL
-      new URL(url)
-      
-      // Make HTTP request with timeout
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000)
-      
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'DNT': '1',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
-        },
-        signal: controller.signal
-      })
-      
-      clearTimeout(timeoutId)
+    const maxRetries = 3
+    let lastError: Error | null = null
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Starting HTTP audit attempt ${attempt}/${maxRetries} for URL:`, url)
+        
+        // Validate URL
+        new URL(url)
+        
+        // Make HTTP request with enhanced timeout and retry logic
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 45000) // Increased timeout
+        
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          },
+          signal: controller.signal,
+          redirect: 'follow',
+          follow: 5 // Follow up to 5 redirects
+        })
+        
+        clearTimeout(timeoutId)
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const html = await response.text()
-      console.log('HTML received, length:', html.length)
-
-      // Parse HTML for SEO data
-      const basicSeoData = this.parseHTMLForSEO(html)
-      console.log('Basic SEO data extracted:', basicSeoData)
-
-      // Perform comprehensive broken link checking
-      console.log('🔍 Starting comprehensive broken link check...')
-      const brokenLinkChecker = BrokenLinkCheckerService.getInstance()
-      const brokenLinkResult = await brokenLinkChecker.checkPageLinks(url, {
-        timeout: 15000,
-        maxRetries: 2,
-        userAgent: 'SEO-Optimizer-Bot/1.0 (HTTP)'
-      })
-
-      // Combine basic SEO data with broken link results
-      const seoData = {
-        ...basicSeoData,
-        brokenLinks: brokenLinkResult.brokenLinks.map(link => ({url: link.url, text: link.linkText})).slice(0, 10), // Limit to first 10 URLs
-        brokenLinkDetails: brokenLinkResult.brokenLinks.slice(0, 20), // Keep detailed info for first 20
-        brokenLinkSummary: {
-          total: brokenLinkResult.totalLinks,
-          broken: brokenLinkResult.brokenLinkCount,
-          status: brokenLinkResult.status,
-          duration: brokenLinkResult.duration
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
-      }
 
-      // Calculate basic scores
-      const scores = this.calculateBasicScores(seoData, html)
+        const html = await response.text()
+        console.log(`HTML received on attempt ${attempt}, length:`, html.length)
 
-      const result: HttpAuditResult = {
-        ...seoData,
-        ...scores,
-        url,
-        timestamp: new Date().toISOString(),
-        status: 'success'
-      }
+        // Parse HTML for SEO data with error handling
+        const basicSeoData = this.parseHTMLForSEO(html)
+        console.log('Basic SEO data extracted successfully')
 
-      console.log('HTTP audit completed successfully:', result)
-      return result
+        // Perform comprehensive broken link checking with error handling
+        console.log('🔍 Starting comprehensive broken link check...')
+        let brokenLinkResult
+        try {
+          const brokenLinkChecker = BrokenLinkCheckerService.getInstance()
+          brokenLinkResult = await brokenLinkChecker.checkPageLinks(url, {
+            timeout: 20000, // Increased timeout
+            maxRetries: 3, // Increased retries
+            userAgent: 'SEO-Optimizer-Bot/1.0 (HTTP)'
+          })
+        } catch (brokenLinkError) {
+          console.log('Broken link check failed, continuing without it:', brokenLinkError instanceof Error ? brokenLinkError.message : 'Unknown error')
+          brokenLinkResult = {
+            brokenLinks: [],
+            totalLinks: 0,
+            brokenLinkCount: 0,
+            status: 'error',
+            duration: 0
+          }
+        }
 
-    } catch (error) {
-      console.error('HTTP audit error:', error)
-      return {
-        title: '',
-        metaDescription: '',
-        h1Tags: [],
-        h2Tags: [],
-        h3Tags: [],
-        h4Tags: [],
-        h5Tags: [],
-        h6Tags: [],
-        titleWordCount: 0,
-        metaDescriptionWordCount: 0,
-        h1WordCount: 0,
-        h2WordCount: 0,
-        h3WordCount: 0,
-        h4WordCount: 0,
-        h5WordCount: 0,
-        h6WordCount: 0,
-        imagesWithoutAlt: [],
-        imagesWithAlt: [],
-        internalLinks: [],
-        externalLinks: [],
-        totalLinks: 0,
-        totalImages: 0,
-        imagesMissingAlt: 0,
-        internalLinkCount: 0,
-        externalLinkCount: 0,
-        headingStructure: {},
-        brokenLinks: [],
-        mobileScore: 0,
-        performanceScore: 0,
-        accessibilityScore: 0,
-        seoScore: 0,
-        bestPracticesScore: 0,
-        url,
-        timestamp: new Date().toISOString(),
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        // Combine basic SEO data with broken link results
+        const seoData = {
+          ...basicSeoData,
+          brokenLinks: brokenLinkResult.brokenLinks.map(link => ({url: link.url, text: link.linkText})).slice(0, 10), // Limit to first 10 URLs
+          brokenLinkDetails: brokenLinkResult.brokenLinks.slice(0, 20), // Keep detailed info for first 20
+          brokenLinkSummary: {
+            total: brokenLinkResult.totalLinks,
+            broken: brokenLinkResult.brokenLinkCount,
+            status: brokenLinkResult.status,
+            duration: brokenLinkResult.duration
+          }
+        }
+
+        // Calculate basic scores
+        const scores = this.calculateBasicScores(seoData, html)
+
+        const result: HttpAuditResult = {
+          ...seoData,
+          ...scores,
+          url,
+          timestamp: new Date().toISOString(),
+          status: 'success'
+        }
+
+        console.log(`HTTP audit completed successfully on attempt ${attempt}`)
+        return result
+
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error')
+        console.error(`HTTP audit attempt ${attempt} failed:`, lastError.message)
+        
+        // If this is the last attempt, return error result
+        if (attempt === maxRetries) {
+          console.error('All HTTP audit attempts failed')
+          return {
+            title: '',
+            metaDescription: '',
+            h1Tags: [],
+            h2Tags: [],
+            h3Tags: [],
+            h4Tags: [],
+            h5Tags: [],
+            h6Tags: [],
+            titleWordCount: 0,
+            metaDescriptionWordCount: 0,
+            h1WordCount: 0,
+            h2WordCount: 0,
+            h3WordCount: 0,
+            h4WordCount: 0,
+            h5WordCount: 0,
+            h6WordCount: 0,
+            imagesWithoutAlt: [],
+            imagesWithAlt: [],
+            internalLinks: [],
+            externalLinks: [],
+            totalLinks: 0,
+            totalImages: 0,
+            imagesMissingAlt: 0,
+            internalLinkCount: 0,
+            externalLinkCount: 0,
+            headingStructure: {},
+            brokenLinks: [],
+            mobileScore: 0,
+            performanceScore: 0,
+            accessibilityScore: 0,
+            seoScore: 0,
+            bestPracticesScore: 0,
+            url,
+            timestamp: new Date().toISOString(),
+            status: 'error',
+            error: lastError.message
+          }
+        }
+        
+        // Wait before retry with exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000) // Exponential backoff, max 5s
+        console.log(`Waiting ${delay}ms before retry...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
       }
     }
+    
+    // This should never be reached, but just in case
+    throw lastError || new Error('HTTP audit failed after all retries')
   }
 
   private parseHTMLForSEO(html: string) {

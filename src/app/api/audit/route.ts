@@ -62,9 +62,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 })
     }
 
-    console.log('Starting audit service')
+    console.log('Starting audit service with enhanced error handling')
     
-    // Try Puppeteer audit first
+    // Try Puppeteer audit first with better error handling
     let auditResult
     try {
       console.log('Attempting Puppeteer audit...')
@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
       auditResult = await puppeteerService.auditWebsite(url)
       
       if (auditResult.status === 'success') {
-        console.log('Puppeteer audit successful:', auditResult)
+        console.log('Puppeteer audit successful')
         
-        // Save audit result to database
+        // Save audit result to database with error handling
         try {
           const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, user?.id)
           if (saveError) {
@@ -87,17 +87,19 @@ export async function POST(request: NextRequest) {
         }
         
         return NextResponse.json(auditResult)
+      } else {
+        console.log('Puppeteer audit returned error status:', auditResult.error)
       }
     } catch (puppeteerError) {
-      console.log('Puppeteer audit failed, trying HTTP fallback:', puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error')
+      console.log('Puppeteer audit failed with exception:', puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error')
     }
 
-    // Fallback to HTTP audit
+    // Fallback to HTTP audit with enhanced error handling
     try {
       console.log('Attempting HTTP audit fallback...')
       const httpService = HttpAuditService.getInstance()
       auditResult = await httpService.auditWebsite(url)
-      console.log('HTTP audit result:', auditResult)
+      console.log('HTTP audit completed with status:', auditResult.status)
       
       if (auditResult.status === 'error') {
         console.log('HTTP audit also failed:', auditResult.error)
@@ -115,7 +117,10 @@ export async function POST(request: NextRequest) {
         }
         
         return NextResponse.json(
-          { error: auditResult.error || 'Failed to audit website with both methods' },
+          { 
+            error: auditResult.error || 'Failed to audit website with both methods',
+            details: 'Both Puppeteer and HTTP audit methods failed. The website may be blocking automated requests or experiencing issues.'
+          },
           { status: 500 }
         )
       }
@@ -134,9 +139,66 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(auditResult)
     } catch (httpError) {
-      console.error('Both audit methods failed:', httpError)
+      console.error('HTTP audit failed with exception:', httpError)
+      
+      // Create a comprehensive error response
+      const errorResult = {
+        title: '',
+        metaDescription: '',
+        h1Tags: [],
+        h2Tags: [],
+        h3Tags: [],
+        h4Tags: [],
+        h5Tags: [],
+        h6Tags: [],
+        titleWordCount: 0,
+        metaDescriptionWordCount: 0,
+        h1WordCount: 0,
+        h2WordCount: 0,
+        h3WordCount: 0,
+        h4WordCount: 0,
+        h5WordCount: 0,
+        h6WordCount: 0,
+        imagesWithoutAlt: [],
+        imagesWithAlt: [],
+        internalLinks: [],
+        externalLinks: [],
+        totalLinks: 0,
+        totalImages: 0,
+        imagesMissingAlt: 0,
+        internalLinkCount: 0,
+        externalLinkCount: 0,
+        headingStructure: {},
+        brokenLinks: [],
+        mobileScore: 0,
+        performanceScore: 0,
+        accessibilityScore: 0,
+        seoScore: 0,
+        bestPracticesScore: 0,
+        url,
+        timestamp: new Date().toISOString(),
+        status: 'error' as const,
+        error: httpError instanceof Error ? httpError.message : 'Unknown error occurred'
+      }
+      
+      // Save error result to database
+      try {
+        const { data: savedAudit, error: saveError } = await saveAuditResultServer(errorResult, siteId, user?.id)
+        if (saveError) {
+          console.error('Failed to save error audit result:', saveError)
+        } else {
+          console.log('Error audit result saved to database:', savedAudit?.id)
+        }
+      } catch (saveError) {
+        console.error('Error saving error audit result:', saveError)
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to audit website. The site may be blocking automated requests.' },
+        { 
+          error: 'Failed to audit website. Both Puppeteer and HTTP methods failed.',
+          details: 'The website may be blocking automated requests, experiencing server issues, or the URL may be invalid.',
+          suggestion: 'Please verify the URL is correct and accessible, then try again.'
+        },
         { status: 500 }
       )
     }

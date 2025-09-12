@@ -52,3 +52,4 @@ CREATE INDEX IF NOT EXISTS idx_audits_seo_score ON audits(seo_score);
 CREATE INDEX IF NOT EXISTS idx_audits_accessibility_score ON audits(accessibility_score);
 CREATE INDEX IF NOT EXISTS idx_audits_best_practices_score ON audits(best_practices_score);
 CREATE INDEX IF NOT EXISTS idx_audits_mobile_score ON audits(mobile_score);
+

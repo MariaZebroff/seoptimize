@@ -299,13 +299,23 @@ export class BrokenLinkCheckerService {
   }> {
     for (let attempt = 1; attempt <= options.maxRetries; attempt++) {
       try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), options.timeout)
+        
         const response = await fetch(url, {
           method: 'HEAD',
           headers: {
-            'User-Agent': options.userAgent
+            'User-Agent': options.userAgent,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           },
-          signal: AbortSignal.timeout(options.timeout)
+          signal: controller.signal,
+          redirect: 'follow'
         })
+        
+        clearTimeout(timeoutId)
 
         // Only consider 404 (Not Found) and 5xx (Server Error) as truly broken
         if (response.status === 404 || response.status >= 500) {
@@ -325,16 +335,40 @@ export class BrokenLinkCheckerService {
         }
 
       } catch (error) {
-        if (attempt === options.maxRetries) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        
+        // Check if it's a timeout or network error
+        if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
+          if (attempt === options.maxRetries) {
+            return {
+              isWorking: false,
+              statusCode: 0,
+              statusText: 'Timeout',
+              reason: `Request timed out after ${options.timeout}ms`
+            }
+          }
+        } else if (errorMessage.includes('fetch')) {
+          if (attempt === options.maxRetries) {
+            return {
+              isWorking: false,
+              statusCode: 0,
+              statusText: 'Network Error',
+              reason: `Network error: ${errorMessage}`
+            }
+          }
+        } else {
+          // For other errors, don't retry
           return {
             isWorking: false,
             statusCode: 0,
             statusText: 'Error',
-            reason: error instanceof Error ? error.message : 'Unknown error'
+            reason: errorMessage
           }
         }
-        // Wait a bit before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Wait with exponential backoff before retrying
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000)
+        await new Promise(resolve => setTimeout(resolve, delay))
       }
     }
 

@@ -57,8 +57,6 @@ export const saveAuditResultServer = async (auditResult: any, siteId?: string, u
       url: auditResult.url,
       title: auditResult.title,
       meta_description: auditResult.metaDescription,
-      
-      // SEO Data
       h1_tags: auditResult.h1Tags,
       h2_tags: auditResult.h2Tags,
       h3_tags: auditResult.h3Tags,
@@ -86,33 +84,11 @@ export const saveAuditResultServer = async (auditResult: any, siteId?: string, u
       broken_links: auditResult.brokenLinks,
       broken_link_details: auditResult.brokenLinkDetails,
       broken_link_summary: auditResult.brokenLinkSummary,
-      
-      // Performance Metrics
-      fcp_score: auditResult.fcpScore,
-      lcp_score: auditResult.lcpScore,
-      cls_score: auditResult.clsScore,
-      fid_score: auditResult.fidScore,
-      load_time: auditResult.loadTime,
-      performance_metrics: auditResult.performanceMetrics,
-      
-      // Accessibility Data
-      accessibility_issues: auditResult.accessibilityIssues,
-      accessibility_recommendations: auditResult.accessibilityRecommendations,
-      accessibility_audit: auditResult.accessibilityAudit,
-      
-      // Best Practices Data
-      best_practices_issues: auditResult.bestPracticesIssues,
-      best_practices_recommendations: auditResult.bestPracticesRecommendations,
-      best_practices_audit: auditResult.bestPracticesAudit,
-      
-      // Overall Scores
       mobile_score: auditResult.mobileScore,
       performance_score: auditResult.performanceScore,
       accessibility_score: auditResult.accessibilityScore,
       seo_score: auditResult.seoScore,
       best_practices_score: auditResult.bestPracticesScore,
-      
-      // Audit Status
       status: auditResult.status,
       error_message: auditResult.error || null,
       audit_type: 'full'
