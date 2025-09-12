@@ -52,6 +52,7 @@ interface AuditRecord {
   status: 'success' | 'error'
   error_message?: string
   created_at: string
+  enhancedSEOAnalysis?: any
 }
 
 interface AuditHistoryProps {
@@ -63,6 +64,7 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
   const [audits, setAudits] = useState<AuditRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<'images' | 'links'>('images')
 
   useEffect(() => {
     // Add a small delay to ensure database has been updated
@@ -80,7 +82,12 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
       if (error) {
         setError(error.message)
       } else {
-        setAudits(data || [])
+        // Map database column names to expected property names
+        const mappedAudits = (data || []).map(audit => ({
+          ...audit,
+          enhancedSEOAnalysis: audit.enhanced_seo_analysis
+        }))
+        setAudits(mappedAudits)
       }
     } catch (err) {
       setError('Failed to load audit history')
@@ -266,7 +273,232 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
       {audits.length > 0 && audits[0].status === 'success' && (
         <div className="bg-white shadow rounded-lg p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Latest SEO Analysis</h3>
-          <EnhancedSEOResults auditData={audits[0]} />
+          <EnhancedSEOResults analysis={audits[0].enhancedSEOAnalysis} />
+        </div>
+      )}
+
+      {/* Image and Link Analysis Section with Tabs */}
+      {audits.length > 0 && audits[0].status === 'success' && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Image & Link Analysis</h3>
+          
+          {/* Tab Navigation */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveAnalysisTab('images')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeAnalysisTab === 'images'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Images ({audits[0].total_images || 0})
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveAnalysisTab('links')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeAnalysisTab === 'links'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  Links ({audits[0].total_links || 0})
+                </div>
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          {activeAnalysisTab === 'images' && (
+            <div className="space-y-6">
+              {/* Image Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">Total Images</span>
+                  <span className="text-2xl font-bold text-blue-600">{audits[0].total_images || 0}</span>
+                </div>
+                
+                <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">With Alt Text</span>
+                  <span className="text-2xl font-bold text-green-600">{audits[0].images_with_alt?.length || 0}</span>
+                </div>
+                
+                <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">Missing Alt Text</span>
+                  <span className="text-2xl font-bold text-red-600">{audits[0].images_missing_alt || 0}</span>
+                </div>
+              </div>
+
+              {/* Images with Alt Text */}
+              {audits[0].images_with_alt && audits[0].images_with_alt.length > 0 && (
+                <div>
+                  <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Images with Alt Text ({audits[0].images_with_alt.length})
+                  </h4>
+                  <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                    <div className="space-y-2 p-4">
+                      {audits[0].images_with_alt.map((image, index) => (
+                        <div key={index} className="text-sm text-gray-600 bg-green-50 p-3 rounded border-l-4 border-green-400">
+                          <div className="font-medium text-green-800">✓ {image}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Images without Alt Text */}
+              {audits[0].images_without_alt && audits[0].images_without_alt.length > 0 && (
+                <div>
+                  <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Images Missing Alt Text ({audits[0].images_without_alt.length})
+                  </h4>
+                  <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                    <div className="space-y-2 p-4">
+                      {audits[0].images_without_alt.map((image, index) => (
+                        <div key={index} className="text-sm text-gray-600 bg-red-50 p-3 rounded border-l-4 border-red-400">
+                          <div className="font-medium text-red-800">⚠ {image}</div>
+                          <div className="text-xs text-red-600 mt-1">Add alt text for accessibility</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(!audits[0].images_with_alt || audits[0].images_with_alt.length === 0) && 
+               (!audits[0].images_without_alt || audits[0].images_without_alt.length === 0) && (
+                <div className="text-center py-8 text-gray-500">
+                  <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p>No images found on this page</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeAnalysisTab === 'links' && (
+            <div className="space-y-6">
+              {/* Link Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">Total Links</span>
+                  <span className="text-2xl font-bold text-blue-600">{audits[0].total_links || 0}</span>
+                </div>
+                
+                <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">Internal</span>
+                  <span className="text-2xl font-bold text-blue-600">{audits[0].internal_link_count || 0}</span>
+                </div>
+                
+                <div className="flex justify-between items-center p-4 bg-purple-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">External</span>
+                  <span className="text-2xl font-bold text-purple-600">{audits[0].external_link_count || 0}</span>
+                </div>
+                
+                {audits[0].broken_links && audits[0].broken_links.length > 0 && (
+                  <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
+                    <span className="text-sm font-medium text-gray-700">Broken</span>
+                    <span className="text-2xl font-bold text-red-600">{audits[0].broken_links.length}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Internal Links */}
+              {audits[0].internal_links && audits[0].internal_links.length > 0 && (
+                <div>
+                  <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    Internal Links ({audits[0].internal_links.length})
+                  </h4>
+                  <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                    <div className="space-y-2 p-4">
+                      {audits[0].internal_links.map((link, index) => (
+                        <div key={index} className="text-sm bg-blue-50 p-3 rounded border-l-4 border-blue-400">
+                          <div className="font-medium text-blue-800">{link.text || 'No text'}</div>
+                          <div className="text-xs text-blue-600 mt-1 break-all">{link.url}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* External Links */}
+              {audits[0].external_links && audits[0].external_links.length > 0 && (
+                <div>
+                  <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    External Links ({audits[0].external_links.length})
+                  </h4>
+                  <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                    <div className="space-y-2 p-4">
+                      {audits[0].external_links.map((link, index) => (
+                        <div key={index} className="text-sm bg-purple-50 p-3 rounded border-l-4 border-purple-400">
+                          <div className="font-medium text-purple-800">{link.text || 'No text'}</div>
+                          <div className="text-xs text-purple-600 mt-1 break-all">{link.url}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Broken Links */}
+              {audits[0].broken_links && audits[0].broken_links.length > 0 && (
+                <div>
+                  <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Broken Links ({audits[0].broken_links.length})
+                  </h4>
+                  <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                    <div className="space-y-2 p-4">
+                      {audits[0].broken_links.map((link, index) => (
+                        <div key={index} className="text-sm bg-red-50 p-3 rounded border-l-4 border-red-400">
+                          <div className="font-medium text-red-800">{link.text || 'No text'}</div>
+                          <div className="text-xs text-red-600 mt-1 break-all">{link.url}</div>
+                          <div className="text-xs text-red-500 mt-1">⚠ This link appears to be broken</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(!audits[0].internal_links || audits[0].internal_links.length === 0) && 
+               (!audits[0].external_links || audits[0].external_links.length === 0) && (
+                <div className="text-center py-8 text-gray-500">
+                  <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  <p>No links found on this page</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

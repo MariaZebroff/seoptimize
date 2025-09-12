@@ -91,7 +91,8 @@ export const saveAuditResultServer = async (auditResult: any, siteId?: string, u
       best_practices_score: auditResult.bestPracticesScore,
       status: auditResult.status,
       error_message: auditResult.error || null,
-      audit_type: 'full'
+      audit_type: 'full',
+      enhanced_seo_analysis: auditResult.enhancedSEOAnalysis || null
     })
     .select()
     .single()

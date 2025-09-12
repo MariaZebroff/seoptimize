@@ -4,7 +4,9 @@ import { useState } from "react"
 import { DynamicRecommendationEngine } from '@/lib/dynamicRecommendations'
 import PerformanceCharts from './PerformanceCharts'
 import DynamicRecommendations from './DynamicRecommendations'
+import EnhancedSEOResults from './EnhancedSEOResults'
 import type { DetailedAuditResults } from '@/lib/puppeteerAuditService'
+import type { SEOAnalysisResult } from '@/lib/enhancedSEOAnalysis'
 
 interface AuditResult {
   title: string
@@ -87,6 +89,9 @@ interface AuditResult {
   // New dynamic fields
   detailedResults?: DetailedAuditResults
   lighthouseResults?: unknown
+  
+  // Enhanced SEO Analysis
+  enhancedSEOAnalysis?: SEOAnalysisResult
 }
 
 interface AuditResultsProps {
@@ -788,6 +793,9 @@ const BrokenLinksCard = ({ brokenLinkDetails, brokenLinkSummary }: {
 export default function AuditResults({ result, loading, error }: AuditResultsProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices'>('overview')
   
+  // Debug logging for active tab
+  console.log('🔍 AuditResults - Current active tab:', activeTab)
+  
   // Generate dynamic recommendations if detailed results are available, otherwise use basic recommendations
   const dynamicInsights = result?.detailedResults 
     ? DynamicRecommendationEngine.generateRecommendations(result.detailedResults)
@@ -870,7 +878,10 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as 'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices')}
+                onClick={() => {
+                  console.log('🔍 Tab clicked:', tab.id)
+                  setActiveTab(tab.id as 'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices')
+                }}
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
                     ? 'border-indigo-500 text-indigo-600'
@@ -942,20 +953,53 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
 
           {activeTab === 'seo' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <SEODataCard 
-                  title="Page Title" 
-                  content={result.title} 
-                />
-                <SEODataCard 
-                  title="Meta Description" 
-                  content={result.metaDescription} 
-                />
-                <SEODataCard 
-                  title="H1 Tags" 
-                  content={result.h1Tags} 
-                  type="list"
-                />
+              {/* Enhanced SEO Analysis */}
+              {(() => {
+                console.log('🔍 AuditResults - Enhanced SEO Analysis check:', {
+                  hasEnhancedSEOAnalysis: !!result.enhancedSEOAnalysis,
+                  enhancedSEOAnalysis: result.enhancedSEOAnalysis,
+                  resultKeys: Object.keys(result)
+                })
+                
+                return result.enhancedSEOAnalysis ? (
+                  <div className="bg-white rounded-lg shadow">
+                    <div className="p-6 border-b border-gray-200">
+                      <h2 className="text-xl font-semibold text-gray-900">Enhanced SEO Analysis</h2>
+                      <p className="text-gray-600 mt-1">Comprehensive SEO analysis with detailed suggestions and character counting</p>
+                    </div>
+                    <div className="p-6">
+                      <EnhancedSEOResults analysis={result.enhancedSEOAnalysis} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <div className="text-yellow-600 text-lg font-semibold mb-2">⚠️ Enhanced SEO Analysis Not Available</div>
+                    <div className="text-yellow-700">Enhanced SEO analysis data is not available for this audit. This might be due to an error during analysis or the data not being generated.</div>
+                  </div>
+                )
+              })()}
+              
+              {/* Basic SEO Data */}
+              <div className="bg-white rounded-lg shadow">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900">Basic SEO Data</h2>
+                  <p className="text-gray-600 mt-1">Fundamental SEO elements and metrics</p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <SEODataCard 
+                      title="Page Title" 
+                      content={result.title} 
+                    />
+                    <SEODataCard 
+                      title="Meta Description" 
+                      content={result.metaDescription} 
+                    />
+                    <SEODataCard 
+                      title="H1 Tags" 
+                      content={result.h1Tags} 
+                      type="list"
+                    />
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">SEO Quick Stats</h3>
                   <div className="space-y-3">
@@ -1024,6 +1068,8 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
                 brokenLinkDetails={result.brokenLinkDetails}
                 brokenLinkSummary={result.brokenLinkSummary}
               />
+                </div>
+              </div>
             </div>
           )}
 

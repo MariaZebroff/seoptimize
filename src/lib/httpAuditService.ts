@@ -1,4 +1,5 @@
 import { BrokenLinkCheckerService } from './brokenLinkChecker'
+import { EnhancedSEOAnalysis, SEOAnalysisResult } from './enhancedSEOAnalysis'
 
 export interface HttpAuditResult {
   title: string
@@ -44,6 +45,9 @@ export interface HttpAuditResult {
   timestamp: string
   status: 'success' | 'error'
   error?: string
+  
+  // Enhanced SEO Analysis
+  enhancedSEOAnalysis?: SEOAnalysisResult
 }
 
 export class HttpAuditService {
@@ -95,6 +99,24 @@ export class HttpAuditService {
         // Parse HTML for SEO data with error handling
         const basicSeoData = this.parseHTMLForSEO(html)
         console.log('Basic SEO data extracted successfully')
+        
+        // Perform enhanced SEO analysis using the extracted data
+        console.log('🔍 Starting enhanced SEO analysis...')
+        let enhancedSEOAnalysis
+        try {
+          enhancedSEOAnalysis = EnhancedSEOAnalysis.analyze(html, url, basicSeoData)
+          console.log('✅ Enhanced SEO analysis completed:', {
+            seoScore: enhancedSEOAnalysis.seoScore,
+            seoGrade: enhancedSEOAnalysis.seoGrade,
+            suggestionsCount: enhancedSEOAnalysis.suggestions.length,
+            titleCharacterCount: enhancedSEOAnalysis.titleCharacterCount,
+            metaDescriptionCharacterCount: enhancedSEOAnalysis.metaDescriptionCharacterCount,
+            h1Count: enhancedSEOAnalysis.h1Tags.length
+          })
+        } catch (error) {
+          console.error('❌ Enhanced SEO analysis failed:', error instanceof Error ? error.message : 'Unknown error')
+          enhancedSEOAnalysis = null
+        }
 
         // Perform comprehensive broken link checking with error handling
         console.log('🔍 Starting comprehensive broken link check...')
@@ -138,7 +160,8 @@ export class HttpAuditService {
           ...scores,
           url,
           timestamp: new Date().toISOString(),
-          status: 'success'
+          status: 'success',
+          enhancedSEOAnalysis
         }
 
         console.log(`HTTP audit completed successfully on attempt ${attempt}`)

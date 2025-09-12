@@ -46,6 +46,9 @@ ALTER TABLE audits ADD COLUMN IF NOT EXISTS best_practices_issues JSONB;
 ALTER TABLE audits ADD COLUMN IF NOT EXISTS best_practices_recommendations JSONB;
 ALTER TABLE audits ADD COLUMN IF NOT EXISTS best_practices_audit JSONB;
 
+-- Add Enhanced SEO Analysis column
+ALTER TABLE audits ADD COLUMN IF NOT EXISTS enhanced_seo_analysis JSONB;
+
 -- Create indexes for better performance on new columns
 CREATE INDEX IF NOT EXISTS idx_audits_performance_score ON audits(performance_score);
 CREATE INDEX IF NOT EXISTS idx_audits_seo_score ON audits(seo_score);

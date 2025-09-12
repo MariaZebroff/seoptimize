@@ -1,5 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer'
 import { BrokenLinkCheckerService } from './brokenLinkChecker'
+import { EnhancedSEOAnalysis, SEOAnalysisResult } from './enhancedSEOAnalysis'
 
 // Conditional imports for Lighthouse (only when needed)
 let lighthouse: any = null
@@ -381,6 +382,9 @@ export interface PuppeteerAuditResult {
   // New detailed audit results
   detailedResults?: DetailedAuditResults
   lighthouseResults?: any
+  
+  // Enhanced SEO Analysis
+  enhancedSEOAnalysis?: SEOAnalysisResult
 }
 
 export class PuppeteerAuditService {
@@ -746,8 +750,11 @@ export class PuppeteerAuditService {
   }
 
   private async extractSEOData(page: Page, url: string) {
-    // Extract basic SEO data from the page
-    const basicSeoData = await page.evaluate(() => {
+    // Get the full HTML content for enhanced analysis
+    const htmlContent = await page.content()
+    
+    // Extract all SEO data in one go
+    const seoData = await page.evaluate(() => {
       // Helper function to count words
       const countWords = (text: string): number => {
         return text.trim().split(/\s+/).filter(word => word.length > 0).length
@@ -894,6 +901,24 @@ export class PuppeteerAuditService {
       }
     })
 
+    // Perform enhanced SEO analysis using the extracted data
+    console.log('🔍 Starting enhanced SEO analysis...')
+    let enhancedSEOAnalysis
+    try {
+      enhancedSEOAnalysis = EnhancedSEOAnalysis.analyze(htmlContent, url, seoData)
+      console.log('✅ Enhanced SEO analysis completed:', {
+        seoScore: enhancedSEOAnalysis.seoScore,
+        seoGrade: enhancedSEOAnalysis.seoGrade,
+        suggestionsCount: enhancedSEOAnalysis.suggestions.length,
+        titleCharacterCount: enhancedSEOAnalysis.titleCharacterCount,
+        metaDescriptionCharacterCount: enhancedSEOAnalysis.metaDescriptionCharacterCount,
+        h1Count: enhancedSEOAnalysis.h1Tags.length
+      })
+    } catch (error) {
+      console.error('❌ Enhanced SEO analysis failed:', error instanceof Error ? error.message : 'Unknown error')
+      enhancedSEOAnalysis = null
+    }
+
     // Perform comprehensive broken link checking
     console.log('🔍 Starting comprehensive broken link check...')
     const brokenLinkChecker = BrokenLinkCheckerService.getInstance()
@@ -903,9 +928,9 @@ export class PuppeteerAuditService {
       userAgent: 'SEO-Optimizer-Bot/1.0 (Puppeteer)'
     })
 
-    // Combine basic SEO data with broken link results
+    // Combine SEO data with broken link results and enhanced analysis
     return {
-      ...basicSeoData,
+      ...seoData,
       brokenLinks: brokenLinkResult.brokenLinks.map(link => ({url: link.url, text: link.linkText})).slice(0, 10), // Limit to first 10 URLs
       brokenLinkDetails: brokenLinkResult.brokenLinks.slice(0, 20), // Keep detailed info for first 20
       brokenLinkSummary: {
@@ -913,7 +938,8 @@ export class PuppeteerAuditService {
         broken: brokenLinkResult.brokenLinkCount,
         status: brokenLinkResult.status,
         duration: brokenLinkResult.duration
-      }
+      },
+      enhancedSEOAnalysis
     }
   }
 
