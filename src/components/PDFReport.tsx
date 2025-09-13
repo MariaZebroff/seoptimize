@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 interface AuditData {
   id: string
@@ -166,30 +168,36 @@ const generateHTMLReport = (auditData: AuditData[], siteName?: string, siteUrl?:
                 <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Page Title</h3>
                 <p style="margin-bottom: 5px;">${latestAudit.title || 'No title found'}</p>
                 <p style="font-size: 12px; color: #6B7280; margin-bottom: 15px;">
-                    Word count: ${latestAudit.title_word_count || 0} words
-                    ${latestAudit.title_word_count && latestAudit.title_word_count >= 30 && latestAudit.title_word_count <= 60 
+                    Character count: ${latestAudit.title ? latestAudit.title.length : 0} characters
+                    ${latestAudit.title && latestAudit.title.length >= 30 && latestAudit.title.length <= 60 
                       ? ' (Optimal)' 
-                      : ' (Review recommended)'}
+                      : latestAudit.title && latestAudit.title.length < 30
+                        ? ' (Too short - add more characters)'
+                        : latestAudit.title && latestAudit.title.length > 60
+                          ? ' (Too long - remove some characters)'
+                          : ' (Review recommended)'}
                 </p>
                 
                 <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Meta Description</h3>
                 <p style="margin-bottom: 5px;">${latestAudit.meta_description || 'No meta description found'}</p>
                 <p style="font-size: 12px; color: #6B7280; margin-bottom: 15px;">
-                    Word count: ${latestAudit.meta_description_word_count || 0} words
-                    ${latestAudit.meta_description_word_count && latestAudit.meta_description_word_count >= 120 && latestAudit.meta_description_word_count <= 160 
+                    Character count: ${latestAudit.meta_description ? latestAudit.meta_description.length : 0} characters
+                    ${latestAudit.meta_description && latestAudit.meta_description.length >= 120 && latestAudit.meta_description.length <= 160 
                       ? ' (Optimal)' 
-                      : ' (Review recommended)'}
+                      : latestAudit.meta_description && latestAudit.meta_description.length < 120
+                        ? ' (Too short - add more characters)'
+                        : latestAudit.meta_description && latestAudit.meta_description.length > 160
+                          ? ' (Too long - remove some characters)'
+                          : ' (Review recommended)'}
                 </p>
                 
                 <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Heading Structure</h3>
                 <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
                     ${['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].map((level) => {
                       const tags = latestAudit[`${level}_tags` as keyof AuditData] as string[] || []
-                      const wordCount = latestAudit[`${level}_word_count` as keyof AuditData] as number || 0
                       return `
                         <div>
                           <div style="font-size: 14px; font-weight: bold;">${level.toUpperCase()}: ${tags.length}</div>
-                          <div style="font-size: 12px; color: #6B7280;">(${wordCount} words)</div>
                         </div>
                       `
                     }).join('')}
@@ -275,12 +283,98 @@ const HTMLReportDownload: React.FC<PDFReportProps> = ({ auditData, siteName, sit
   return (
     <button
       onClick={handleDownload}
-      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
     >
       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
       </svg>
       Download HTML Report
+    </button>
+  )
+}
+
+// PDF Report Download Component
+const PDFReportDownload: React.FC<PDFReportProps> = ({ auditData, siteName, siteUrl }) => {
+  const [isGenerating, setIsGenerating] = useState(false)
+  const fileName = `seo-audit-${siteName ? siteName.replace(/[^a-zA-Z0-9]/g, '-') : 'report'}-${new Date().toISOString().split('T')[0]}.pdf`
+
+  const handleDownload = async () => {
+    setIsGenerating(true)
+    try {
+      // Create a temporary div with the HTML content
+      const htmlContent = generateHTMLReport(auditData, siteName, siteUrl)
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = htmlContent
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '0'
+      tempDiv.style.width = '800px'
+      tempDiv.style.backgroundColor = 'white'
+      document.body.appendChild(tempDiv)
+
+      // Convert to canvas
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv)
+
+      // Create PDF
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+
+      let position = 0
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      pdf.save(fileName)
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Error generating PDF. Please try again.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleDownload}
+      disabled={isGenerating}
+      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {isGenerating ? (
+        <>
+          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Generating PDF...
+        </>
+      ) : (
+        <>
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Download PDF Report
+        </>
+      )}
     </button>
   )
 }
@@ -293,15 +387,53 @@ const PDFReport: React.FC<PDFReportProps> = ({ auditData, siteName, siteUrl }) =
         <h3 className="text-lg font-semibold text-gray-900">Download Audit Report</h3>
       </div>
       
-      <div className="text-sm text-gray-600 mb-4">
-        Generate a comprehensive HTML report with all audit data, scores, and recommendations. 
-        The report can be opened in any web browser and easily shared or printed.
+      <div className="text-sm text-gray-600 mb-6">
+        Generate comprehensive reports with all audit data, scores, and recommendations. 
+        Choose between HTML (fast, web-friendly) or PDF (print-ready, professional) formats.
       </div>
       
-      <HTMLReportDownload auditData={auditData} siteName={siteName} siteUrl={siteUrl} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* HTML Report Option */}
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center mb-3">
+            <div className="flex-shrink-0">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h4 className="text-lg font-medium text-gray-900">HTML Report</h4>
+              <p className="text-sm text-gray-500">Fast & Web-Friendly</p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Instant download, opens in any browser, perfect for sharing and viewing online.
+          </p>
+          <HTMLReportDownload auditData={auditData} siteName={siteName} siteUrl={siteUrl} />
+        </div>
+
+        {/* PDF Report Option */}
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center mb-3">
+            <div className="flex-shrink-0">
+              <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h4 className="text-lg font-medium text-gray-900">PDF Report</h4>
+              <p className="text-sm text-gray-500">Professional & Print-Ready</p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            High-quality PDF format, perfect for printing, archiving, and professional presentations.
+          </p>
+          <PDFReportDownload auditData={auditData} siteName={siteName} siteUrl={siteUrl} />
+        </div>
+      </div>
       
       {auditData.length === 0 && (
-        <div className="mt-4 text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
+        <div className="mt-6 text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
           No audit data available. Run an audit first to generate a report.
         </div>
       )}

@@ -519,7 +519,7 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
                     : 'Perfect length for search results'}
               </div>
             </div>
-          </div>
+                              </div>
 
           {/* Progress Bar */}
           <div className="space-y-2">
@@ -528,7 +528,7 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
               <span>120 (Min)</span>
               <span>160 (Max)</span>
               <span>320</span>
-            </div>
+                              </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div 
                 className={`h-3 rounded-full transition-all duration-500 ${
@@ -542,8 +542,8 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
                   width: `${Math.min(100, (safeAnalysis.metaDescriptionCharacterCount / 320) * 100)}%` 
                 }}
               ></div>
-            </div>
-          </div>
+                  </div>
+                </div>
 
           {/* Actual Meta Description Text */}
           <div className="border rounded-lg p-4">
@@ -582,7 +582,7 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
               <div className="text-2xl font-bold text-gray-900">{value}</div>
               <div className="text-sm text-gray-500 capitalize">
                 {key.replace(/([A-Z])/g, ' $1').trim()}
-              </div>
+                              </div>
                               </div>
                         ))}
                 </div>
@@ -626,20 +626,20 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
                         <div className="text-sm text-gray-900 font-medium mb-1">{tag}</div>
                         <div className="text-xs text-gray-500">
                           {tag.split(/\s+/).filter(word => word.length > 0).length} words • {tag.length} characters
-                        </div>
+                      </div>
                       </div>
                     ))}
-                  </div>
+                      </div>
                 ) : (
                   <div className="text-center py-4">
                     <p className="text-sm text-gray-400 italic">No {level} tags found</p>
                   </div>
                 )}
-              </div>
+                                </div>
             )
           })}
-        </div>
-      </div>
+                          </div>
+                </div>
               </div>
   )
 
