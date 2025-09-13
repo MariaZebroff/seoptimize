@@ -58,9 +58,10 @@ interface AuditRecord {
 interface AuditHistoryProps {
   siteId?: string
   limit?: number
+  latestAuditResult?: any
 }
 
-export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) {
+export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: AuditHistoryProps) {
   const [audits, setAudits] = useState<AuditRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -74,6 +75,62 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
     
     return () => clearTimeout(timer)
   }, [siteId, limit])
+
+  // Update audits when latestAuditResult changes
+  useEffect(() => {
+    if (latestAuditResult && latestAuditResult.status === 'success') {
+      // Convert the latest audit result to match the AuditRecord format
+      const latestAudit: AuditRecord = {
+        id: `latest-${Date.now()}`, // Temporary ID for latest result
+        url: latestAuditResult.url,
+        title: latestAuditResult.title,
+        meta_description: latestAuditResult.metaDescription,
+        h1_tags: latestAuditResult.h1Tags || [],
+        h2_tags: latestAuditResult.h2Tags || [],
+        h3_tags: latestAuditResult.h3Tags || [],
+        h4_tags: latestAuditResult.h4Tags || [],
+        h5_tags: latestAuditResult.h5Tags || [],
+        h6_tags: latestAuditResult.h6Tags || [],
+        title_word_count: latestAuditResult.titleWordCount || 0,
+        meta_description_word_count: latestAuditResult.metaDescriptionWordCount || 0,
+        h1_word_count: latestAuditResult.h1WordCount || 0,
+        h2_word_count: latestAuditResult.h2WordCount || 0,
+        h3_word_count: latestAuditResult.h3WordCount || 0,
+        h4_word_count: latestAuditResult.h4WordCount || 0,
+        h5_word_count: latestAuditResult.h5WordCount || 0,
+        h6_word_count: latestAuditResult.h6WordCount || 0,
+        images_without_alt: latestAuditResult.imagesWithoutAlt || [],
+        images_with_alt: latestAuditResult.imagesWithAlt || [],
+        internal_links: latestAuditResult.internalLinks || [],
+        external_links: latestAuditResult.externalLinks || [],
+        total_links: latestAuditResult.totalLinks || 0,
+        total_images: latestAuditResult.totalImages || 0,
+        images_missing_alt: latestAuditResult.imagesMissingAlt || 0,
+        internal_link_count: latestAuditResult.internalLinkCount || 0,
+        external_link_count: latestAuditResult.externalLinkCount || 0,
+        heading_structure: latestAuditResult.headingStructure || {},
+        broken_links: latestAuditResult.brokenLinks || [],
+        broken_link_details: latestAuditResult.brokenLinkDetails,
+        broken_link_summary: latestAuditResult.brokenLinkSummary,
+        mobile_score: latestAuditResult.mobileScore || 0,
+        performance_score: latestAuditResult.performanceScore || 0,
+        accessibility_score: latestAuditResult.accessibilityScore || 0,
+        seo_score: latestAuditResult.seoScore || 0,
+        best_practices_score: latestAuditResult.bestPracticesScore || 0,
+        status: latestAuditResult.status || 'success',
+        error_message: latestAuditResult.error,
+        created_at: latestAuditResult.timestamp || new Date().toISOString(),
+        enhancedSEOAnalysis: latestAuditResult.enhancedSEOAnalysis
+      }
+
+      // Update the audits array to include the latest result at the beginning
+      setAudits(prevAudits => {
+        // Remove any existing "latest" audit to avoid duplicates
+        const filteredAudits = prevAudits.filter(audit => !audit.id.startsWith('latest-'))
+        return [latestAudit, ...filteredAudits]
+      })
+    }
+  }, [latestAuditResult])
 
   const loadAuditHistory = async () => {
     try {
@@ -272,7 +329,17 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
       {/* Enhanced SEO Analysis Section */}
       {audits.length > 0 && audits[0].status === 'success' && (
         <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Latest SEO Analysis</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Latest SEO Analysis</h3>
+            {audits[0].id.startsWith('latest-') && (
+              <div className="flex items-center text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Just Updated
+              </div>
+            )}
+          </div>
           <EnhancedSEOResults analysis={audits[0].enhancedSEOAnalysis} />
         </div>
       )}
@@ -280,7 +347,17 @@ export default function AuditHistory({ siteId, limit = 20 }: AuditHistoryProps) 
       {/* Image and Link Analysis Section with Tabs */}
       {audits.length > 0 && audits[0].status === 'success' && (
         <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Image & Link Analysis</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Image & Link Analysis</h3>
+            {audits[0].id.startsWith('latest-') && (
+              <div className="flex items-center text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Just Updated
+              </div>
+            )}
+          </div>
           
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 mb-6">

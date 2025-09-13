@@ -177,7 +177,11 @@ function AuditPageContent() {
           {/* Audit History for this specific website */}
           {url && (
             <div className="mt-8">
-              <AuditHistory siteId={siteId} limit={20} />
+              <AuditHistory 
+                siteId={siteId} 
+                limit={20} 
+                latestAuditResult={auditResult}
+              />
             </div>
           )}
         </div>

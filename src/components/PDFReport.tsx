@@ -1,7 +1,6 @@
 'use client'
 
-import React from 'react'
-import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Image } from '@react-pdf/renderer'
+import React, { useState, useEffect } from 'react'
 
 interface AuditData {
   id: string
@@ -49,158 +48,6 @@ interface PDFReportProps {
   siteUrl?: string
 }
 
-// Create styles for the PDF
-const styles = StyleSheet.create({
-  page: {
-    flexDirection: 'column',
-    backgroundColor: '#FFFFFF',
-    padding: 30,
-    fontSize: 12,
-    lineHeight: 1.5,
-  },
-  header: {
-    marginBottom: 30,
-    paddingBottom: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: '#3B82F6',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 5,
-  },
-  date: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  section: {
-    marginBottom: 25,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 15,
-    paddingBottom: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  scoreGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-  },
-  scoreCard: {
-    width: '48%',
-    marginRight: '2%',
-    marginBottom: 15,
-    padding: 15,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  scoreTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#374151',
-    marginBottom: 5,
-  },
-  scoreValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-  },
-  scoreGood: {
-    color: '#059669',
-  },
-  scoreWarning: {
-    color: '#D97706',
-  },
-  scorePoor: {
-    color: '#DC2626',
-  },
-  auditItem: {
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  auditHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  auditTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    flex: 1,
-  },
-  auditDate: {
-    fontSize: 10,
-    color: '#6B7280',
-  },
-  auditUrl: {
-    fontSize: 10,
-    color: '#3B82F6',
-    marginBottom: 10,
-  },
-  auditScores: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 10,
-  },
-  miniScore: {
-    fontSize: 10,
-    marginRight: 10,
-    marginBottom: 5,
-    padding: 3,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 3,
-  },
-  auditDetails: {
-    fontSize: 10,
-    color: '#6B7280',
-  },
-  list: {
-    marginLeft: 10,
-  },
-  listItem: {
-    fontSize: 10,
-    color: '#6B7280',
-    marginBottom: 3,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 30,
-    left: 30,
-    right: 30,
-    textAlign: 'center',
-    fontSize: 10,
-    color: '#9CA3AF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 10,
-  },
-})
-
-// Helper function to get score color
-const getScoreColor = (score: number) => {
-  if (score >= 80) return styles.scoreGood
-  if (score >= 60) return styles.scoreWarning
-  return styles.scorePoor
-}
-
 // Helper function to get score status
 const getScoreStatus = (score: number) => {
   if (score >= 80) return 'Good'
@@ -208,8 +55,8 @@ const getScoreStatus = (score: number) => {
   return 'Poor'
 }
 
-// PDF Document Component
-const SEOAuditPDF: React.FC<PDFReportProps> = ({ auditData, siteName, siteUrl }) => {
+// Generate HTML report content
+const generateHTMLReport = (auditData: AuditData[], siteName?: string, siteUrl?: string): string => {
   const latestAudit = auditData.find(audit => audit.status === 'success')
   const successfulAudits = auditData.filter(audit => audit.status === 'success')
   
@@ -222,266 +69,236 @@ const SEOAuditPDF: React.FC<PDFReportProps> = ({ auditData, siteName, siteUrl })
     bestPractices: Math.round(successfulAudits.reduce((sum, audit) => sum + audit.best_practices_score, 0) / successfulAudits.length),
   } : null
 
-  return (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>SEO Audit Report</Text>
-          <Text style={styles.subtitle}>{siteName || siteUrl || 'Website Analysis'}</Text>
-          <Text style={styles.date}>
-            Generated on {new Date().toLocaleDateString('en-US', { 
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Audit Report - ${siteName || siteUrl || 'Website Analysis'}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { border-bottom: 3px solid #3B82F6; padding-bottom: 20px; margin-bottom: 30px; }
+        .title { font-size: 28px; font-weight: bold; color: #1F2937; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #6B7280; margin-bottom: 5px; }
+        .date { font-size: 14px; color: #9CA3AF; }
+        .section { margin-bottom: 30px; }
+        .section-title { font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #E5E7EB; }
+        .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .score-card { padding: 15px; background-color: #F9FAFB; border-radius: 8px; border: 1px solid #E5E7EB; }
+        .score-title { font-size: 14px; font-weight: bold; color: #374151; margin-bottom: 5px; }
+        .score-value { font-size: 24px; font-weight: bold; color: #1F2937; }
+        .score-good { color: #059669; }
+        .score-warning { color: #D97706; }
+        .score-poor { color: #DC2626; }
+        .audit-item { margin-bottom: 20px; padding: 15px; background-color: #F9FAFB; border-radius: 8px; border: 1px solid #E5E7EB; }
+        .audit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .audit-title { font-size: 14px; font-weight: bold; color: #1F2937; }
+        .audit-date { font-size: 12px; color: #6B7280; }
+        .audit-url { font-size: 12px; color: #3B82F6; margin-bottom: 10px; }
+        .audit-scores { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+        .mini-score { font-size: 12px; padding: 5px 10px; background-color: #E5E7EB; border-radius: 3px; }
+        .list { margin-left: 20px; }
+        .list-item { font-size: 12px; color: #6B7280; margin-bottom: 3px; }
+        .footer { text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">SEO Audit Report</h1>
+            <div class="subtitle">${siteName || siteUrl || 'Website Analysis'}</div>
+            <div class="date">Generated on ${new Date().toLocaleDateString('en-US', { 
               year: 'numeric', 
               month: 'long', 
               day: 'numeric',
               hour: '2-digit',
               minute: '2-digit'
-            })}
-          </Text>
-        </View>
+            })}</div>
+        </div>
 
-        {/* Executive Summary */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Executive Summary</Text>
-          <Text style={{ marginBottom: 10 }}>
-            This report contains {successfulAudits.length} successful audit{successfulAudits.length !== 1 ? 's' : ''} 
-            {successfulAudits.length > 0 ? ` from ${new Date(successfulAudits[successfulAudits.length - 1].created_at).toLocaleDateString()} to ${new Date(successfulAudits[0].created_at).toLocaleDateString()}` : ''}.
-          </Text>
-          {avgScores && (
-            <Text>
-              Overall performance shows an average SEO score of {avgScores.seo}/100, 
-              with mobile optimization at {avgScores.mobile}/100 and accessibility at {avgScores.accessibility}/100.
-            </Text>
-          )}
-        </View>
+        <div class="section">
+            <h2 class="section-title">Executive Summary</h2>
+            <p>This report contains ${successfulAudits.length} successful audit${successfulAudits.length !== 1 ? 's' : ''} 
+            ${successfulAudits.length > 0 ? ` from ${new Date(successfulAudits[successfulAudits.length - 1].created_at).toLocaleDateString()} to ${new Date(successfulAudits[0].created_at).toLocaleDateString()}` : ''}.</p>
+            ${avgScores ? `
+            <p>Overall performance shows an average SEO score of ${avgScores.seo}/100, 
+            with mobile optimization at ${avgScores.mobile}/100 and accessibility at ${avgScores.accessibility}/100.</p>
+            ` : ''}
+        </div>
 
-        {/* Current Performance Scores */}
-        {latestAudit && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current Performance Scores</Text>
-            <View style={styles.scoreGrid}>
-              <View style={styles.scoreCard}>
-                <Text style={styles.scoreTitle}>Mobile Score</Text>
-                <Text style={[styles.scoreValue, getScoreColor(latestAudit.mobile_score)]}>
-                  {latestAudit.mobile_score}/100
-                </Text>
-                <Text style={{ fontSize: 10, color: '#6B7280' }}>
-                  {getScoreStatus(latestAudit.mobile_score)}
-                </Text>
-              </View>
-              <View style={styles.scoreCard}>
-                <Text style={styles.scoreTitle}>Performance Score</Text>
-                <Text style={[styles.scoreValue, getScoreColor(latestAudit.performance_score)]}>
-                  {latestAudit.performance_score}/100
-                </Text>
-                <Text style={{ fontSize: 10, color: '#6B7280' }}>
-                  {getScoreStatus(latestAudit.performance_score)}
-                </Text>
-              </View>
-              <View style={styles.scoreCard}>
-                <Text style={styles.scoreTitle}>Accessibility Score</Text>
-                <Text style={[styles.scoreValue, getScoreColor(latestAudit.accessibility_score)]}>
-                  {latestAudit.accessibility_score}/100
-                </Text>
-                <Text style={{ fontSize: 10, color: '#6B7280' }}>
-                  {getScoreStatus(latestAudit.accessibility_score)}
-                </Text>
-              </View>
-              <View style={styles.scoreCard}>
-                <Text style={styles.scoreTitle}>SEO Score</Text>
-                <Text style={[styles.scoreValue, getScoreColor(latestAudit.seo_score)]}>
-                  {latestAudit.seo_score}/100
-                </Text>
-                <Text style={{ fontSize: 10, color: '#6B7280' }}>
-                  {getScoreStatus(latestAudit.seo_score)}
-                </Text>
-              </View>
-              <View style={styles.scoreCard}>
-                <Text style={styles.scoreTitle}>Best Practices Score</Text>
-                <Text style={[styles.scoreValue, getScoreColor(latestAudit.best_practices_score)]}>
-                  {latestAudit.best_practices_score}/100
-                </Text>
-                <Text style={{ fontSize: 10, color: '#6B7280' }}>
-                  {getScoreStatus(latestAudit.best_practices_score)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
+        ${latestAudit ? `
+        <div class="section">
+            <h2 class="section-title">Current Performance Scores</h2>
+            <div class="score-grid">
+                <div class="score-card">
+                    <div class="score-title">Mobile Score</div>
+                    <div class="score-value ${latestAudit.mobile_score >= 80 ? 'score-good' : latestAudit.mobile_score >= 60 ? 'score-warning' : 'score-poor'}">${latestAudit.mobile_score}/100</div>
+                    <div style="font-size: 12px; color: #6B7280;">${getScoreStatus(latestAudit.mobile_score)}</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-title">Performance Score</div>
+                    <div class="score-value ${latestAudit.performance_score >= 80 ? 'score-good' : latestAudit.performance_score >= 60 ? 'score-warning' : 'score-poor'}">${latestAudit.performance_score}/100</div>
+                    <div style="font-size: 12px; color: #6B7280;">${getScoreStatus(latestAudit.performance_score)}</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-title">Accessibility Score</div>
+                    <div class="score-value ${latestAudit.accessibility_score >= 80 ? 'score-good' : latestAudit.accessibility_score >= 60 ? 'score-warning' : 'score-poor'}">${latestAudit.accessibility_score}/100</div>
+                    <div style="font-size: 12px; color: #6B7280;">${getScoreStatus(latestAudit.accessibility_score)}</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-title">SEO Score</div>
+                    <div class="score-value ${latestAudit.seo_score >= 80 ? 'score-good' : latestAudit.seo_score >= 60 ? 'score-warning' : 'score-poor'}">${latestAudit.seo_score}/100</div>
+                    <div style="font-size: 12px; color: #6B7280;">${getScoreStatus(latestAudit.seo_score)}</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-title">Best Practices Score</div>
+                    <div class="score-value ${latestAudit.best_practices_score >= 80 ? 'score-good' : latestAudit.best_practices_score >= 60 ? 'score-warning' : 'score-poor'}">${latestAudit.best_practices_score}/100</div>
+                    <div style="font-size: 12px; color: #6B7280;">${getScoreStatus(latestAudit.best_practices_score)}</div>
+                </div>
+            </div>
+        </div>
 
-        {/* SEO Analysis */}
-        {latestAudit && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Enhanced SEO Analysis</Text>
-            <View style={styles.auditItem}>
-              {/* Page Title */}
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 10 }}>Page Title</Text>
-              <Text style={{ marginBottom: 5 }}>
-                {latestAudit.title || 'No title found'}
-              </Text>
-              <Text style={{ fontSize: 10, color: '#6B7280', marginBottom: 15 }}>
-                Word count: {latestAudit.title_word_count || 0} words
-                {latestAudit.title_word_count && latestAudit.title_word_count >= 30 && latestAudit.title_word_count <= 60 
-                  ? ' (Optimal)' 
-                  : ' (Review recommended)'}
-              </Text>
-              
-              {/* Meta Description */}
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 10 }}>Meta Description</Text>
-              <Text style={{ marginBottom: 5 }}>
-                {latestAudit.meta_description || 'No meta description found'}
-              </Text>
-              <Text style={{ fontSize: 10, color: '#6B7280', marginBottom: 15 }}>
-                Word count: {latestAudit.meta_description_word_count || 0} words
-                {latestAudit.meta_description_word_count && latestAudit.meta_description_word_count >= 120 && latestAudit.meta_description_word_count <= 160 
-                  ? ' (Optimal)' 
-                  : ' (Review recommended)'}
-              </Text>
-              
-              {/* Heading Structure */}
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 10 }}>Heading Structure</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 15 }}>
-                {['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].map((level) => {
-                  const tags = latestAudit[`${level}_tags` as keyof AuditData] as string[] || []
-                  const wordCount = latestAudit[`${level}_word_count` as keyof AuditData] as number || 0
-                  return (
-                    <View key={level} style={{ marginRight: 15, marginBottom: 5 }}>
-                      <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{level.toUpperCase()}: {tags.length}</Text>
-                      <Text style={{ fontSize: 10, color: '#6B7280' }}>({wordCount} words)</Text>
-                    </View>
-                  )
-                })}
-              </View>
-              
-              {/* H1 Tags */}
-              {latestAudit.h1_tags && latestAudit.h1_tags.length > 0 && (
-                <>
-                  <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 10 }}>H1 Tags</Text>
-                  <View style={styles.list}>
-                    {latestAudit.h1_tags.map((tag, index) => (
-                      <Text key={index} style={styles.listItem}>• {tag}</Text>
-                    ))}
-                  </View>
-                </>
-              )}
-              
-              {/* Images Analysis */}
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 10, marginTop: 15 }}>Images Analysis</Text>
-              <Text style={{ fontSize: 12, marginBottom: 5 }}>
-                Total Images: {latestAudit.total_images || 0}
-              </Text>
-              <Text style={{ fontSize: 12, marginBottom: 5 }}>
-                Images with Alt Text: {latestAudit.images_with_alt?.length || 0}
-              </Text>
-              <Text style={{ fontSize: 12, marginBottom: 10, color: latestAudit.images_missing_alt && latestAudit.images_missing_alt > 0 ? '#DC2626' : '#059669' }}>
-                Images Missing Alt Text: {latestAudit.images_missing_alt || 0}
-              </Text>
-              
-              {/* Links Analysis */}
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 10, marginTop: 15 }}>Links Analysis</Text>
-              <Text style={{ fontSize: 12, marginBottom: 5 }}>
-                Total Links: {latestAudit.total_links || 0}
-              </Text>
-              <Text style={{ fontSize: 12, marginBottom: 5 }}>
-                Internal Links: {latestAudit.internal_link_count || 0}
-              </Text>
-              <Text style={{ fontSize: 12, marginBottom: 10 }}>
-                External Links: {latestAudit.external_link_count || 0}
-              </Text>
-              
-              {/* Broken Links */}
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 10, marginTop: 15 }}>Broken Links</Text>
-              {latestAudit.broken_links && latestAudit.broken_links.length > 0 ? (
-                <View style={styles.list}>
-                  {latestAudit.broken_links.map((link, index) => (
-                    <Text key={index} style={[styles.listItem, { color: '#DC2626' }]}>
-                      • {link.url} {link.text && `(${link.text})`}
-                    </Text>
-                  ))}
-                </View>
-              ) : (
-                <Text style={{ color: '#059669' }}>No broken links found</Text>
-              )}
-            </View>
-          </View>
-        )}
+        <div class="section">
+            <h2 class="section-title">Enhanced SEO Analysis</h2>
+            <div class="audit-item">
+                <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Page Title</h3>
+                <p style="margin-bottom: 5px;">${latestAudit.title || 'No title found'}</p>
+                <p style="font-size: 12px; color: #6B7280; margin-bottom: 15px;">
+                    Word count: ${latestAudit.title_word_count || 0} words
+                    ${latestAudit.title_word_count && latestAudit.title_word_count >= 30 && latestAudit.title_word_count <= 60 
+                      ? ' (Optimal)' 
+                      : ' (Review recommended)'}
+                </p>
+                
+                <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Meta Description</h3>
+                <p style="margin-bottom: 5px;">${latestAudit.meta_description || 'No meta description found'}</p>
+                <p style="font-size: 12px; color: #6B7280; margin-bottom: 15px;">
+                    Word count: ${latestAudit.meta_description_word_count || 0} words
+                    ${latestAudit.meta_description_word_count && latestAudit.meta_description_word_count >= 120 && latestAudit.meta_description_word_count <= 160 
+                      ? ' (Optimal)' 
+                      : ' (Review recommended)'}
+                </p>
+                
+                <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Heading Structure</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+                    ${['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].map((level) => {
+                      const tags = latestAudit[`${level}_tags` as keyof AuditData] as string[] || []
+                      const wordCount = latestAudit[`${level}_word_count` as keyof AuditData] as number || 0
+                      return `
+                        <div>
+                          <div style="font-size: 14px; font-weight: bold;">${level.toUpperCase()}: ${tags.length}</div>
+                          <div style="font-size: 12px; color: #6B7280;">(${wordCount} words)</div>
+                        </div>
+                      `
+                    }).join('')}
+                </div>
+                
+                ${latestAudit.h1_tags && latestAudit.h1_tags.length > 0 ? `
+                <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">H1 Tags</h3>
+                <ul class="list">
+                    ${latestAudit.h1_tags.map(tag => `<li class="list-item">• ${tag}</li>`).join('')}
+                </ul>
+                ` : ''}
+                
+                <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px; margin-top: 15px;">Images Analysis</h3>
+                <p style="font-size: 14px; margin-bottom: 5px;">Total Images: ${latestAudit.total_images || 0}</p>
+                <p style="font-size: 14px; margin-bottom: 5px;">Images with Alt Text: ${latestAudit.images_with_alt?.length || 0}</p>
+                <p style="font-size: 14px; margin-bottom: 10px; color: ${latestAudit.images_missing_alt && latestAudit.images_missing_alt > 0 ? '#DC2626' : '#059669'};">
+                    Images Missing Alt Text: ${latestAudit.images_missing_alt || 0}
+                </p>
+                
+                <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px; margin-top: 15px;">Links Analysis</h3>
+                <p style="font-size: 14px; margin-bottom: 5px;">Total Links: ${latestAudit.total_links || 0}</p>
+                <p style="font-size: 14px; margin-bottom: 5px;">Internal Links: ${latestAudit.internal_link_count || 0}</p>
+                <p style="font-size: 14px; margin-bottom: 10px;">External Links: ${latestAudit.external_link_count || 0}</p>
+                
+                <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px; margin-top: 15px;">Broken Links</h3>
+                ${latestAudit.broken_links && latestAudit.broken_links.length > 0 ? `
+                <ul class="list">
+                    ${latestAudit.broken_links.map(link => `<li class="list-item" style="color: #DC2626;">• ${link.url} ${link.text ? `(${link.text})` : ''}</li>`).join('')}
+                </ul>
+                ` : '<p style="color: #059669;">No broken links found</p>'}
+            </div>
+        </div>
+        ` : ''}
 
-        {/* Audit History */}
-        {successfulAudits.length > 1 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Audit History</Text>
-            {successfulAudits.slice(0, 5).map((audit, index) => (
-              <View key={audit.id} style={styles.auditItem}>
-                <View style={styles.auditHeader}>
-                  <Text style={styles.auditTitle}>
-                    Audit #{successfulAudits.length - index}
-                  </Text>
-                  <Text style={styles.auditDate}>
-                    {new Date(audit.created_at).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Text style={styles.auditUrl}>{audit.url}</Text>
-                <View style={styles.auditScores}>
-                  <Text style={styles.miniScore}>Mobile: {audit.mobile_score}</Text>
-                  <Text style={styles.miniScore}>Performance: {audit.performance_score}</Text>
-                  <Text style={styles.miniScore}>Accessibility: {audit.accessibility_score}</Text>
-                  <Text style={styles.miniScore}>SEO: {audit.seo_score}</Text>
-                  <Text style={styles.miniScore}>Best Practices: {audit.best_practices_score}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+        ${successfulAudits.length > 1 ? `
+        <div class="section">
+            <h2 class="section-title">Audit History</h2>
+            ${successfulAudits.slice(0, 5).map((audit, index) => `
+            <div class="audit-item">
+                <div class="audit-header">
+                    <div class="audit-title">Audit #${successfulAudits.length - index}</div>
+                    <div class="audit-date">${new Date(audit.created_at).toLocaleDateString()}</div>
+                </div>
+                <div class="audit-url">${audit.url}</div>
+                <div class="audit-scores">
+                    <span class="mini-score">Mobile: ${audit.mobile_score}</span>
+                    <span class="mini-score">Performance: ${audit.performance_score}</span>
+                    <span class="mini-score">Accessibility: ${audit.accessibility_score}</span>
+                    <span class="mini-score">SEO: ${audit.seo_score}</span>
+                    <span class="mini-score">Best Practices: ${audit.best_practices_score}</span>
+                </div>
+            </div>
+            `).join('')}
+        </div>
+        ` : ''}
 
-        {/* Footer */}
-        <Text style={styles.footer}>
-          Generated by SEO Optimize - Professional SEO Audit Tool
-        </Text>
-      </Page>
-    </Document>
+        <div class="footer">
+            Generated by SEO Optimize - Professional SEO Audit Tool
+        </div>
+    </div>
+</body>
+</html>
+  `
+}
+
+// HTML Report Download Component
+const HTMLReportDownload: React.FC<PDFReportProps> = ({ auditData, siteName, siteUrl }) => {
+  const fileName = `seo-audit-${siteName ? siteName.replace(/[^a-zA-Z0-9]/g, '-') : 'report'}-${new Date().toISOString().split('T')[0]}.html`
+
+  const handleDownload = () => {
+    const htmlContent = generateHTMLReport(auditData, siteName, siteUrl)
+    const blob = new Blob([htmlContent], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <button
+      onClick={handleDownload}
+      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+    >
+      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Download HTML Report
+    </button>
   )
 }
 
-// Main PDF Report Component
+// Main Report Component
 const PDFReport: React.FC<PDFReportProps> = ({ auditData, siteName, siteUrl }) => {
-  const fileName = `seo-audit-${siteName ? siteName.replace(/[^a-zA-Z0-9]/g, '-') : 'report'}-${new Date().toISOString().split('T')[0]}.pdf`
-
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Download PDF Report</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Download Audit Report</h3>
       </div>
       
       <div className="text-sm text-gray-600 mb-4">
-        Generate a comprehensive PDF report with all audit data, scores, and recommendations.
+        Generate a comprehensive HTML report with all audit data, scores, and recommendations. 
+        The report can be opened in any web browser and easily shared or printed.
       </div>
       
-      <PDFDownloadLink
-        document={<SEOAuditPDF auditData={auditData} siteName={siteName} siteUrl={siteUrl} />}
-        fileName={fileName}
-        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-      >
-        {({ blob, url, loading, error }) => (
-          <>
-            {loading ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Generating PDF...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Download PDF Report
-              </>
-            )}
-          </>
-        )}
-      </PDFDownloadLink>
+      <HTMLReportDownload auditData={auditData} siteName={siteName} siteUrl={siteUrl} />
       
       {auditData.length === 0 && (
         <div className="mt-4 text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
