@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { getAuditHistory, deleteAudit } from "@/lib/supabaseAuth"
 import AuditScoreChart from "./AuditScoreChart"
-import AuditMetricsChart from "./AuditMetricsChart"
 import PDFReport from "./PDFReport"
 import EnhancedSEOResults from "./EnhancedSEOResults"
 
@@ -265,15 +264,9 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
         </div>
         
         {/* Charts Loading */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
-            <div className="h-80 animate-pulse">
-              <div className="h-full bg-gray-200 rounded"></div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
             <div className="h-80 animate-pulse">
               <div className="h-full bg-gray-200 rounded"></div>
             </div>
@@ -310,17 +303,11 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
         </div>
         
         {/* Charts Error */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
             <div className="text-center text-gray-500 py-8">
               Unable to load chart data
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
-            <div className="text-center text-gray-500 py-8">
-              Unable to load metrics data
             </div>
           </div>
         </div>
@@ -346,17 +333,11 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
         </div>
         
         {/* Charts Empty State */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
             <div className="text-center text-gray-500 py-8">
               No audit data available for charting
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
-            <div className="text-center text-gray-500 py-8">
-              No audit data available for metrics
             </div>
           </div>
         </div>
@@ -382,12 +363,8 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
       />
       
       {/* Charts Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
         <AuditScoreChart 
-          auditData={audits} 
-          siteName={audits.length > 0 ? audits[0].url : undefined}
-        />
-        <AuditMetricsChart 
           auditData={audits} 
           siteName={audits.length > 0 ? audits[0].url : undefined}
         />
