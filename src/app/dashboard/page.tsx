@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { getCurrentUser, signOut, addSite, getUserSites, deleteSite } from "@/lib/supabaseAuth"
-import AuditButton from "@/components/AuditButton"
+import { getCurrentUser, signOut, addSite, getUserSites, deleteSite, addPage, getPagesForSite, deletePage, detectPagesFromSite, addMultiplePages, type Page } from "@/lib/supabaseAuth"
 import type { User } from "@supabase/supabase-js"
 
 interface Site {
@@ -11,23 +10,9 @@ interface Site {
   url: string
   title: string | null
   created_at: string
+  pages?: Page[]
 }
 
-interface AuditResult {
-  title: string
-  metaDescription: string
-  h1Tags: string[]
-  brokenLinks: Array<{url: string, text: string}>
-  mobileScore: number
-  performanceScore: number
-  accessibilityScore: number
-  seoScore: number
-  bestPracticesScore: number
-  url: string
-  timestamp: string
-  status: 'success' | 'error'
-  error?: string
-}
 
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null)
@@ -38,7 +23,12 @@ export default function Dashboard() {
   const [newSiteTitle, setNewSiteTitle] = useState("")
   const [isAddingSite, setIsAddingSite] = useState(false)
   const [error, setError] = useState("")
-  const [auditResults, setAuditResults] = useState<{[key: string]: AuditResult}>({})
+  const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set())
+  const [showAddPage, setShowAddPage] = useState<string | null>(null)
+  const [newPageUrl, setNewPageUrl] = useState("")
+  const [newPageTitle, setNewPageTitle] = useState("")
+  const [isAddingPage, setIsAddingPage] = useState(false)
+  const [isDetectingPages, setIsDetectingPages] = useState<string | null>(null)
   const router = useRouter()
 
   const loadSites = useCallback(async () => {
@@ -50,7 +40,14 @@ export default function Dashboard() {
           router.push('/auth/signin')
         }
       } else {
-        setSites(data || [])
+        // Load pages for each site
+        const sitesWithPages = await Promise.all(
+          (data || []).map(async (site) => {
+            const { data: pages } = await getPagesForSite(site.id)
+            return { ...site, pages: pages || [] }
+          })
+        )
+        setSites(sitesWithPages)
       }
     } catch (err) {
       console.error('Error loading sites:', err)
@@ -100,7 +97,7 @@ export default function Dashboard() {
   }
 
   const handleDeleteSite = async (siteId: string) => {
-    if (!confirm("Are you sure you want to delete this site?")) return
+    if (!confirm("Are you sure you want to delete this site and all its pages?")) return
 
     try {
       const { error } = await deleteSite(siteId)
@@ -120,12 +117,102 @@ export default function Dashboard() {
     }
   }
 
-  const handleAuditComplete = (url: string, result: AuditResult) => {
-    setAuditResults(prev => ({
-      ...prev,
-      [url]: result
-    }))
+  const toggleSiteExpansion = (siteId: string) => {
+    setExpandedSites(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(siteId)) {
+        newSet.delete(siteId)
+      } else {
+        newSet.add(siteId)
+      }
+      return newSet
+    })
   }
+
+  const handleAddPage = async (siteId: string) => {
+    if (!newPageUrl.trim()) return
+
+    setIsAddingPage(true)
+    try {
+      const { data, error } = await addPage(siteId, newPageUrl.trim(), newPageTitle.trim() || undefined)
+      if (error) {
+        alert('Failed to add page: ' + error.message)
+      } else {
+        setNewPageUrl("")
+        setNewPageTitle("")
+        setShowAddPage(null)
+        loadSites() // Reload sites to get updated pages
+      }
+    } catch (err) {
+      alert('Failed to add page. Please try again.')
+    } finally {
+      setIsAddingPage(false)
+    }
+  }
+
+  const handleDeletePage = async (pageId: string, siteId: string) => {
+    if (!confirm('Are you sure you want to delete this page?')) {
+      return
+    }
+
+    try {
+      const { error } = await deletePage(pageId)
+      if (error) {
+        alert('Failed to delete page: ' + error.message)
+      } else {
+        loadSites() // Reload sites to get updated pages
+      }
+    } catch (err) {
+      alert('Failed to delete page. Please try again.')
+    }
+  }
+
+  const handleDetectPages = async (siteId: string, siteUrl: string) => {
+    setIsDetectingPages(siteId)
+    try {
+      const { data, error } = await detectPagesFromSite(siteUrl)
+      if (error) {
+        alert('Failed to detect pages: ' + error.message)
+      } else if (data && data.length > 0) {
+        // Use the new addMultiplePages function for better duplicate handling
+        const { data: results, error: addError } = await addMultiplePages(siteId, data)
+        
+        if (addError) {
+          alert('Failed to add pages: ' + addError.message)
+        } else {
+          loadSites() // Reload sites to get updated pages
+          
+          // Show detailed results
+          let message = ''
+          if (results.added > 0) {
+            message += `Successfully added ${results.added} new pages!`
+          }
+          if (results.skipped > 0) {
+            message += ` ${results.skipped} pages were skipped (already exist).`
+          }
+          if (results.errors > 0) {
+            message += ` ${results.errors} pages failed to add.`
+          }
+          
+          if (results.added === 0 && results.skipped > 0) {
+            message = `All ${results.skipped} detected pages already exist in your site.`
+          } else if (results.added === 0 && results.skipped === 0) {
+            message = 'No pages were added. Please try again or add pages manually.'
+          }
+          
+          alert(message)
+        }
+      } else {
+        alert('No pages detected. The site may not have a sitemap or accessible navigation links. You can manually add pages.')
+      }
+    } catch (err) {
+      console.error('Error detecting pages:', err)
+      alert('Failed to detect pages. Please try again or add pages manually.')
+    } finally {
+      setIsDetectingPages(null)
+    }
+  }
+
 
   if (loading) {
     return (
@@ -269,70 +356,187 @@ export default function Dashboard() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sites.map((site) => (
-                  <div key={site.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-gray-900 truncate">
-                        {site.title || 'Untitled Site'}
-                      </h3>
-                      <button
-                        onClick={() => handleDeleteSite(site.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2 truncate">{site.url}</p>
-                    <p className="text-xs text-gray-400">
-                      Added {new Date(site.created_at).toLocaleDateString()}
-                    </p>
-                    <div className="mt-3 flex justify-between items-center">
-                      <AuditButton 
-                        url={site.url} 
-                        siteId={site.id}
-                        className="flex-1 mr-2"
-                        onAuditComplete={(result) => handleAuditComplete(site.url, result)}
-                      />
-                      <button 
-                        onClick={() => router.push(`/audit?url=${encodeURIComponent(site.url)}`)}
-                        className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
-                      >
-                        Full Report →
-                      </button>
-                    </div>
-                    {auditResults[site.url] && (
-                      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium text-gray-700">Latest Audit</span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(auditResults[site.url].timestamp).toLocaleString()}
-                          </span>
+              <div className="space-y-4">
+                {sites.map((site) => {
+                  const isExpanded = expandedSites.has(site.id)
+                  const pages = site.pages || []
+                  
+                  return (
+                    <div key={site.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      {/* Site Header */}
+                      <div className="p-4 bg-gray-50 border-b border-gray-200">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => toggleSiteExpansion(site.id)}
+                              className="text-gray-600 hover:text-gray-800"
+                            >
+                              <svg 
+                                className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                            <h3 className="font-medium text-gray-900 truncate">
+                              {site.title || 'Untitled Site'}
+                            </h3>
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                              {pages.length} page{pages.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteSite(site.id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Delete Site
+                          </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="flex justify-between">
-                            <span>Performance:</span>
-                            <span className={`font-medium ${
-                              auditResults[site.url].performanceScore >= 90 ? 'text-green-600' :
-                              auditResults[site.url].performanceScore >= 50 ? 'text-yellow-600' : 'text-red-600'
-                            }`}>
-                              {auditResults[site.url].performanceScore}/100
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>SEO:</span>
-                            <span className={`font-medium ${
-                              auditResults[site.url].seoScore >= 90 ? 'text-green-600' :
-                              auditResults[site.url].seoScore >= 50 ? 'text-yellow-600' : 'text-red-600'
-                            }`}>
-                              {auditResults[site.url].seoScore}/100
-                            </span>
-                          </div>
+                        <p className="text-sm text-gray-600 mb-2 truncate">{site.url}</p>
+                        <p className="text-xs text-gray-400">
+                          Added {new Date(site.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+
+                      {/* Site Actions */}
+                      <div className="p-4 bg-white border-b border-gray-200">
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => router.push(`/audit?url=${encodeURIComponent(site.url)}`)}
+                            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                          >
+                            Run Full Analysis
+                          </button>
+                          <button
+                            onClick={() => handleDetectPages(site.id, site.url)}
+                            disabled={isDetectingPages === site.id}
+                            className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {isDetectingPages === site.id ? (
+                              <>
+                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Crawling Site...
+                              </>
+                            ) : (
+                              'Auto-detect Pages'
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setShowAddPage(showAddPage === site.id ? null : site.id)}
+                            className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                          >
+                            Add Page Manually
+                          </button>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {/* Add Page Form */}
+                      {showAddPage === site.id && (
+                        <div className="p-4 bg-blue-50 border-b border-gray-200">
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Page URL
+                              </label>
+                              <input
+                                type="url"
+                                value={newPageUrl}
+                                onChange={(e) => setNewPageUrl(e.target.value)}
+                                placeholder={`${site.url}/page-path`}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Page Title (Optional)
+                              </label>
+                              <input
+                                type="text"
+                                value={newPageTitle}
+                                onChange={(e) => setNewPageTitle(e.target.value)}
+                                placeholder="Page title"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleAddPage(site.id)}
+                                disabled={isAddingPage || !newPageUrl.trim()}
+                                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+                              >
+                                {isAddingPage ? 'Adding...' : 'Add Page'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowAddPage(null)
+                                  setNewPageUrl("")
+                                  setNewPageTitle("")
+                                }}
+                                className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pages List */}
+                      {isExpanded && (
+                        <div className="p-4">
+                          {pages.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                              <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <p>No pages added yet</p>
+                              <p className="text-sm">Use "Auto-detect Pages" or "Add Page Manually" to get started</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {pages.map((page) => (
+                                <div key={page.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-gray-900">
+                                        {page.title || page.path}
+                                      </span>
+                                      {page.is_main_page && (
+                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                          Main
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-600 truncate">{page.url}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => router.push(`/audit?url=${encodeURIComponent(page.url)}`)}
+                                      className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                                    >
+                                      Audit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeletePage(page.id, site.id)}
+                                      className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

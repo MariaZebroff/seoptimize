@@ -166,6 +166,180 @@ export const updateSite = async (siteId: string, updates: { url?: string; title?
   return { data, error }
 }
 
+// Page management functions
+export interface Page {
+  id: string
+  site_id: string
+  user_id: string
+  url: string
+  title: string | null
+  path: string
+  is_main_page: boolean
+  created_at: string
+  updated_at: string
+}
+
+export const addPage = async (siteId: string, url: string, title?: string) => {
+  checkEnvVars()
+  
+  // Get current user to ensure we're authenticated
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { data: null, error: { message: 'User not authenticated' } }
+  }
+
+  // Extract path from URL
+  const urlObj = new URL(url)
+  const path = urlObj.pathname || '/'
+  
+  // First, check if page already exists
+  const { data: existingPage, error: checkError } = await supabase
+    .from('pages')
+    .select('id, url')
+    .eq('user_id', user.id)
+    .eq('site_id', siteId)
+    .eq('url', url)
+    .single()
+  
+  if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+    return { data: null, error: checkError }
+  }
+  
+  // If page already exists, return the existing page
+  if (existingPage) {
+    return { data: existingPage, error: null }
+  }
+  
+  // Add new page
+  const { data, error } = await supabase
+    .from('pages')
+    .insert({
+      user_id: user.id,
+      site_id: siteId,
+      url: url,
+      title: title || null,
+      path: path,
+      is_main_page: path === '/'
+    })
+    .select()
+    .single()
+  return { data, error }
+}
+
+export const getPagesForSite = async (siteId: string) => {
+  checkEnvVars()
+  
+  // Get current user to ensure we're authenticated
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { data: null, error: { message: 'User not authenticated' } }
+  }
+  
+  const { data, error } = await supabase
+    .from('pages')
+    .select('*')
+    .eq('site_id', siteId)
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+  return { data, error }
+}
+
+export const deletePage = async (pageId: string) => {
+  checkEnvVars()
+  
+  // Get current user to ensure we're authenticated
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { data: null, error: { message: 'User not authenticated' } }
+  }
+  
+  const { data, error } = await supabase
+    .from('pages')
+    .delete()
+    .eq('id', pageId)
+    .eq('user_id', user.id) // Double-check ownership
+    .select()
+    .single()
+  return { data, error }
+}
+
+export const addMultiplePages = async (siteId: string, pages: Array<{url: string, title?: string}>) => {
+  checkEnvVars()
+  
+  // Get current user to ensure we're authenticated
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { data: null, error: { message: 'User not authenticated' } }
+  }
+
+  const results = {
+    added: 0,
+    skipped: 0,
+    errors: 0,
+    pages: [] as any[]
+  }
+
+  // Get existing pages for this site to avoid duplicates
+  const { data: existingPages } = await supabase
+    .from('pages')
+    .select('url')
+    .eq('user_id', user.id)
+    .eq('site_id', siteId)
+
+  const existingUrls = new Set(existingPages?.map(p => p.url) || [])
+
+  // Process each page
+  for (const page of pages) {
+    try {
+      // Skip if page already exists
+      if (existingUrls.has(page.url)) {
+        results.skipped++
+        continue
+      }
+
+      // Add the page
+      const { data, error } = await addPage(siteId, page.url, page.title)
+      if (error) {
+        console.warn('Failed to add page:', page.url, error.message)
+        results.errors++
+      } else {
+        results.added++
+        results.pages.push(data)
+        // Add to existing URLs to avoid duplicates in the same batch
+        existingUrls.add(page.url)
+      }
+    } catch (err) {
+      console.warn('Error adding page:', page.url, err)
+      results.errors++
+    }
+  }
+
+  return { data: results, error: null }
+}
+
+export const detectPagesFromSite = async (siteUrl: string) => {
+  try {
+    // This is a simplified page detection - in a real implementation,
+    // you might want to use a web scraping service or API
+    const response = await fetch('/api/detect-pages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ siteUrl }),
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to detect pages')
+    }
+    
+    const data = await response.json()
+    return { data: data.pages, error: null }
+  } catch (error) {
+    return { data: null, error: { message: 'Failed to detect pages' } }
+  }
+}
+
 // Audit history functions
 export interface AuditResult {
   title: string
