@@ -53,6 +53,28 @@ interface AuditRecord {
   error_message?: string
   created_at: string
   enhancedSEOAnalysis?: any
+  
+  // Performance Metrics
+  fcp_score?: number
+  lcp_score?: number
+  cls_score?: number
+  fid_score?: number
+  load_time?: number
+  performance_metrics?: any
+  
+  // Accessibility Data
+  accessibility_issues?: any
+  accessibility_recommendations?: any
+  accessibility_audit?: any
+  
+  // Best Practices Data
+  best_practices_issues?: any
+  best_practices_recommendations?: any
+  best_practices_audit?: any
+  
+  // Detailed Results
+  detailed_results?: any
+  lighthouse_results?: any
 }
 
 interface AuditHistoryProps {
@@ -66,6 +88,8 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<'images' | 'links'>('images')
+  const [expandedAudits, setExpandedAudits] = useState<Set<string>>(new Set())
+  const [activeDetailTab, setActiveDetailTab] = useState<{[auditId: string]: 'seo'}>({})
 
   useEffect(() => {
     // Add a small delay to ensure database has been updated
@@ -120,7 +144,29 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
         status: latestAuditResult.status || 'success',
         error_message: latestAuditResult.error,
         created_at: latestAuditResult.timestamp || new Date().toISOString(),
-        enhancedSEOAnalysis: latestAuditResult.enhancedSEOAnalysis
+        enhancedSEOAnalysis: latestAuditResult.enhancedSEOAnalysis,
+        
+        // Performance Metrics
+        fcp_score: latestAuditResult.fcpScore,
+        lcp_score: latestAuditResult.lcpScore,
+        cls_score: latestAuditResult.clsScore,
+        fid_score: latestAuditResult.fidScore,
+        load_time: latestAuditResult.loadTime,
+        performance_metrics: latestAuditResult.performanceMetrics,
+        
+        // Accessibility Data
+        accessibility_issues: latestAuditResult.accessibilityIssues,
+        accessibility_recommendations: latestAuditResult.accessibilityRecommendations,
+        accessibility_audit: latestAuditResult.accessibilityAudit,
+        
+        // Best Practices Data
+        best_practices_issues: latestAuditResult.bestPracticesIssues,
+        best_practices_recommendations: latestAuditResult.bestPracticesRecommendations,
+        best_practices_audit: latestAuditResult.bestPracticesAudit,
+        
+        // Detailed Results
+        detailed_results: latestAuditResult.detailedResults,
+        lighthouse_results: latestAuditResult.lighthouseResults
       }
 
       // Update the audits array to include the latest result at the beginning
@@ -185,6 +231,27 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
     if (score >= 70) return 'bg-yellow-100'
     return 'bg-red-100'
   }
+
+  const toggleAuditExpansion = (auditId: string) => {
+    setExpandedAudits(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(auditId)) {
+        newSet.delete(auditId)
+      } else {
+        newSet.add(auditId)
+        // Set default tab when expanding
+        if (!activeDetailTab[auditId]) {
+          setActiveDetailTab(prev => ({ ...prev, [auditId]: 'seo' }))
+        }
+      }
+      return newSet
+    })
+  }
+
+  const setDetailTab = (auditId: string, tab: 'seo') => {
+    setActiveDetailTab(prev => ({ ...prev, [auditId]: tab }))
+  }
+
 
   if (loading) {
     return (
@@ -579,7 +646,7 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
         </div>
       )}
 
-      {/* Audit History Section */}
+      {/* Enhanced Audit History Section */}
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-900">Audit History</h3>
@@ -592,82 +659,244 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
         </div>
         
         <div className="space-y-4">
-          {audits.map((audit) => (
-            <div key={audit.id} className="border rounded-lg p-4 hover:bg-gray-50">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium text-gray-900">
-                      {audit.title || audit.url}
-                    </h4>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      audit.status === 'success' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {audit.status}
-                    </span>
+          {audits.map((audit) => {
+            const isExpanded = expandedAudits.has(audit.id)
+            const currentTab = activeDetailTab[audit.id] || 'seo'
+            
+            return (
+              <div key={audit.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                {/* Audit Header */}
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-medium text-gray-900">
+                        {audit.title || audit.url}
+                      </h4>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        audit.status === 'success' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {audit.status}
+                      </span>
+                      {audit.id.startsWith('latest-') && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          Latest
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2 break-all">{audit.url}</p>
+                    <p className="text-xs text-gray-500">{formatDate(audit.created_at)}</p>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{audit.url}</p>
-                  <p className="text-xs text-gray-500">{formatDate(audit.created_at)}</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleAuditExpansion(audit.id)}
+                      className="text-sm text-indigo-600 hover:text-indigo-500 flex items-center gap-1"
+                    >
+                      {isExpanded ? 'Hide Details' : 'Show Details'}
+                      <svg 
+                        className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteAudit(audit.id)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                      title="Delete audit record"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteAudit(audit.id)}
-                  className="text-red-600 hover:text-red-800 text-sm"
-                  title="Delete audit record"
-                >
-                  Delete
-                </button>
+
+                {/* Score Overview */}
+                {audit.status === 'success' ? (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                    <div className={`text-center p-3 rounded-lg ${getScoreBgColor(audit.performance_score)}`}>
+                      <div className={`text-lg font-bold ${getScoreColor(audit.performance_score)}`}>
+                        {audit.performance_score}
+                      </div>
+                      <div className="text-xs text-gray-600">Performance</div>
+                    </div>
+                    <div className={`text-center p-3 rounded-lg ${getScoreBgColor(audit.seo_score)}`}>
+                      <div className={`text-lg font-bold ${getScoreColor(audit.seo_score)}`}>
+                        {audit.seo_score}
+                      </div>
+                      <div className="text-xs text-gray-600">SEO</div>
+                    </div>
+                    <div className={`text-center p-3 rounded-lg ${getScoreBgColor(audit.accessibility_score)}`}>
+                      <div className={`text-lg font-bold ${getScoreColor(audit.accessibility_score)}`}>
+                        {audit.accessibility_score}
+                      </div>
+                      <div className="text-xs text-gray-600">Accessibility</div>
+                    </div>
+                    <div className={`text-center p-3 rounded-lg ${getScoreBgColor(audit.best_practices_score)}`}>
+                      <div className={`text-lg font-bold ${getScoreColor(audit.best_practices_score)}`}>
+                        {audit.best_practices_score}
+                      </div>
+                      <div className="text-xs text-gray-600">Best Practices</div>
+                    </div>
+                    <div className={`text-center p-3 rounded-lg ${getScoreBgColor(audit.mobile_score)}`}>
+                      <div className={`text-lg font-bold ${getScoreColor(audit.mobile_score)}`}>
+                        {audit.mobile_score}
+                      </div>
+                      <div className="text-xs text-gray-600">Mobile</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-red-600 text-sm mb-4 p-3 bg-red-50 rounded-lg">
+                    Error: {audit.error_message || 'Unknown error'}
+                  </div>
+                )}
+
+                {/* Collapsible Detailed Information */}
+                {isExpanded && audit.status === 'success' && (
+                  <div className="border-t pt-4">
+                    {/* Tab Navigation - Only SEO tab since it's the only one with data */}
+                    <div className="border-b border-gray-200 mb-4">
+                      <nav className="-mb-px flex space-x-8">
+                        <button
+                          className="py-2 px-1 border-b-2 font-medium text-sm border-blue-500 text-blue-600"
+                        >
+                          SEO Analysis
+                        </button>
+                      </nav>
+                    </div>
+
+                    {/* SEO Analysis Content */}
+                    <div className="space-y-4">
+                      <h5 className="font-semibold text-gray-800">SEO Analysis</h5>
+                      
+                      {/* Content Structure and Links */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <h6 className="font-medium text-gray-700">Content Structure</h6>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span>Title Length:</span>
+                              <span className={audit.title_word_count > 60 ? 'text-red-600' : 'text-green-600'}>
+                                {audit.title_word_count} characters
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Meta Description:</span>
+                              <span className={audit.meta_description_word_count > 160 ? 'text-red-600' : 'text-green-600'}>
+                                {audit.meta_description_word_count} characters
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>H1 Tags:</span>
+                              <span className={audit.h1_tags?.length === 1 ? 'text-green-600' : 'text-yellow-600'}>
+                                {audit.h1_tags?.length || 0} found
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <h6 className="font-medium text-gray-700">Link Analysis</h6>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span>Total Links:</span>
+                              <span className="text-blue-600 font-medium">{audit.total_links || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Internal Links:</span>
+                              <span className="text-green-600">{audit.internal_link_count || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>External Links:</span>
+                              <span className="text-purple-600">{audit.external_link_count || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Broken Links:</span>
+                              <span className={audit.broken_links?.length > 0 ? 'text-red-600' : 'text-green-600'}>
+                                {audit.broken_links?.length || 0}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Images and Heading Structure */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <h6 className="font-medium text-gray-700">Image Analysis</h6>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span>Total Images:</span>
+                              <span className="text-blue-600 font-medium">{audit.total_images || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>With Alt Text:</span>
+                              <span className="text-green-600">{audit.images_with_alt?.length || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Missing Alt Text:</span>
+                              <span className={audit.images_missing_alt > 0 ? 'text-red-600' : 'text-green-600'}>
+                                {audit.images_missing_alt || 0}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Alt Text Coverage:</span>
+                              <span className={audit.total_images > 0 && (audit.images_missing_alt || 0) === 0 ? 'text-green-600' : 'text-yellow-600'}>
+                                {audit.total_images > 0 ? Math.round(((audit.images_with_alt?.length || 0) / audit.total_images) * 100) : 0}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <h6 className="font-medium text-gray-700">Heading Structure</h6>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span>H1:</span>
+                              <span>{audit.h1_word_count || 0} words</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>H2:</span>
+                              <span>{audit.h2_word_count || 0} words</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>H3:</span>
+                              <span>{audit.h3_word_count || 0} words</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Broken Links Details */}
+                      {audit.broken_links && audit.broken_links.length > 0 && (
+                        <div className="space-y-3">
+                          <h6 className="font-medium text-gray-700 flex items-center">
+                            <svg className="w-4 h-4 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                            Broken Links ({audit.broken_links.length})
+                          </h6>
+                          <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+                            <div className="space-y-2 p-3">
+                              {audit.broken_links.map((link, index) => (
+                                <div key={index} className="text-sm bg-red-50 p-2 rounded border-l-2 border-red-400">
+                                  <div className="font-medium text-red-800">{link.text || 'No text'}</div>
+                                  <div className="text-xs text-red-600 break-all">{link.url}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {audit.status === 'success' ? (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.performance_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.performance_score)}`}>
-                      {audit.performance_score}
-                    </div>
-                    <div className="text-xs text-gray-600">Performance</div>
-                  </div>
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.seo_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.seo_score)}`}>
-                      {audit.seo_score}
-                    </div>
-                    <div className="text-xs text-gray-600">SEO</div>
-                  </div>
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.accessibility_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.accessibility_score)}`}>
-                      {audit.accessibility_score}
-                    </div>
-                    <div className="text-xs text-gray-600">Accessibility</div>
-                  </div>
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.best_practices_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.best_practices_score)}`}>
-                      {audit.best_practices_score}
-                    </div>
-                    <div className="text-xs text-gray-600">Best Practices</div>
-                  </div>
-                  <div className={`text-center p-2 rounded ${getScoreBgColor(audit.mobile_score)}`}>
-                    <div className={`text-sm font-medium ${getScoreColor(audit.mobile_score)}`}>
-                      {audit.mobile_score}
-                    </div>
-                    <div className="text-xs text-gray-600">Mobile</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-red-600 text-sm">
-                  Error: {audit.error_message || 'Unknown error'}
-                </div>
-              )}
-
-              {audit.status === 'success' && audit.h1_tags && audit.h1_tags.length > 0 && (
-                <div className="mt-3 pt-3 border-t">
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">H1 Tags:</span> {audit.h1_tags.join(', ')}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
