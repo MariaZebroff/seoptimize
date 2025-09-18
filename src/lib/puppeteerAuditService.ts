@@ -66,22 +66,22 @@ async function runLighthouse() {
   try {
     console.log('🚀 Launching Chrome for Lighthouse...')
     
-    // Use Puppeteer's bundled Chrome for Railway
+    // Find Chrome executable for Railway
     let chromePath = null
     
-    // First try to find Puppeteer's bundled Chrome
+    // Try to find Chrome using which command first
     try {
-      const puppeteer = require('puppeteer')
-      const executablePath = puppeteer.executablePath()
-      if (executablePath && fs.existsSync(executablePath)) {
-        chromePath = executablePath
-        console.log('✅ Found Puppeteer bundled Chrome at:', chromePath)
+      const { execSync } = require('child_process')
+      const whichResult = execSync('which google-chrome-stable 2>/dev/null || which chromium-browser 2>/dev/null || which chromium 2>/dev/null || which google-chrome 2>/dev/null', { encoding: 'utf8' })
+      if (whichResult && whichResult.trim()) {
+        chromePath = whichResult.trim()
+        console.log('✅ Found Chrome using which command:', chromePath)
       }
     } catch (e) {
-      console.log('⚠️ Could not get Puppeteer executable path:', e.message)
+      console.log('⚠️ which command failed, trying direct paths...')
     }
     
-    // If Puppeteer Chrome not found, try system Chrome paths
+    // If which didn't work, try direct paths
     if (!chromePath) {
       const possibleChromePaths = [
         process.env.CHROME_PATH,
@@ -101,19 +101,40 @@ async function runLighthouse() {
       for (const chromePathOption of possibleChromePaths) {
         if (chromePathOption && fs.existsSync(chromePathOption)) {
           chromePath = chromePathOption
-          console.log('✅ Found system Chrome at:', chromePath)
+          console.log('✅ Found Chrome at:', chromePath)
           break
         }
       }
     }
     
+    // If still no Chrome found, try to find it in the system
     if (!chromePath) {
-      console.log('❌ No Chrome executable found. Trying to use chrome-launcher without explicit path...')
-      // Don't throw error, let chrome-launcher try to find Chrome itself
+      try {
+        const { execSync } = require('child_process')
+        const findResult = execSync('find /usr -name "*chrome*" -type f -executable 2>/dev/null | head -5', { encoding: 'utf8' })
+        if (findResult && findResult.trim()) {
+          const chromePaths = findResult.trim().split('\\n')
+          for (const path of chromePaths) {
+            if (path && fs.existsSync(path)) {
+              chromePath = path
+              console.log('✅ Found Chrome using find command:', chromePath)
+              break
+            }
+          }
+        }
+      } catch (e) {
+        console.log('⚠️ find command failed')
+      }
+    }
+    
+    if (!chromePath) {
+      console.log('❌ No Chrome executable found. Available paths checked:', possibleChromePaths)
+      throw new Error('Chrome executable not found - please set CHROME_PATH environment variable')
     }
     
     // Enhanced Chrome launcher options for better reliability
-    const launchOptions = {
+    chrome = await chromeLauncher.launch({
+      chromePath: chromePath,
       chromeFlags: [
         '--headless',
         '--no-sandbox',
@@ -139,14 +160,7 @@ async function runLighthouse() {
         '--disable-renderer-backgrounding'
       ],
       logLevel: 'error'
-    }
-    
-    // Only add chromePath if we found one
-    if (chromePath) {
-      launchOptions.chromePath = chromePath
-    }
-    
-    chrome = await chromeLauncher.launch(launchOptions)
+    })
     
     console.log('✅ Chrome launched on port:', chrome.port)
     
