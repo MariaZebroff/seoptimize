@@ -128,7 +128,20 @@ async function runLighthouse() {
     }
     
     if (!chromePath) {
-      console.log('❌ No Chrome executable found. Available paths checked:', possibleChromePaths)
+      console.log('❌ No Chrome executable found. Available paths checked:', [
+        process.env.CHROME_PATH,
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/usr/bin/google-chrome',
+        '/opt/google/chrome/chrome',
+        '/usr/local/bin/chrome',
+        '/usr/bin/chrome',
+        '/snap/bin/chromium',
+        '/usr/bin/chromium-browser-stable',
+        '/usr/bin/google-chrome-beta',
+        '/usr/bin/google-chrome-unstable'
+      ])
       throw new Error('Chrome executable not found - please set CHROME_PATH environment variable')
     }
     
