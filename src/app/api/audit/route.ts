@@ -27,7 +27,14 @@ async function getUserFromRequest(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Audit API called')
+    console.log('🚀 PRODUCTION DEPLOYMENT VERIFIED - Audit API called - VERSION 3.0')
+    console.log('🌐 Environment check:', {
+      NODE_ENV: process.env.NODE_ENV,
+      VERCEL: process.env.VERCEL,
+      VERCEL_ENV: process.env.VERCEL_ENV,
+      RAILWAY: process.env.RAILWAY,
+      ENABLE_LIGHTHOUSE: process.env.ENABLE_LIGHTHOUSE
+    })
     
     // Parse request body with error handling
     let url: string

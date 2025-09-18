@@ -11,9 +11,18 @@ async function runLighthouseInChildProcess(url: string): Promise<any> {
   const maxRetries = 3
   let lastError: Error | null = null
   
+  console.log('🚀 PRODUCTION: runLighthouseInChildProcess called for:', url)
+  console.log('🔍 PRODUCTION: Environment check in child process:', {
+    NODE_ENV: process.env.NODE_ENV,
+    VERCEL: process.env.VERCEL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    RAILWAY: process.env.RAILWAY,
+    ENABLE_LIGHTHOUSE: process.env.ENABLE_LIGHTHOUSE
+  })
+  
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`Lighthouse attempt ${attempt}/${maxRetries} for URL: ${url}`)
+      console.log(`🚀 PRODUCTION: Lighthouse attempt ${attempt}/${maxRetries} for URL: ${url}`)
       
       const result = await runLighthouseAttempt(url)
       if (result) {
@@ -396,11 +405,20 @@ export class PuppeteerAuditService {
     const maxRetries = 3
     let lastError: Error | null = null
     
+    console.log('🎯 PRODUCTION: PuppeteerAuditService.auditWebsite called for:', url)
+    console.log('🔍 PRODUCTION: Environment check:', {
+      NODE_ENV: process.env.NODE_ENV,
+      VERCEL: process.env.VERCEL,
+      VERCEL_ENV: process.env.VERCEL_ENV,
+      RAILWAY: process.env.RAILWAY,
+      ENABLE_LIGHTHOUSE: process.env.ENABLE_LIGHTHOUSE
+    })
+    
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       let browser: Browser | null = null
       
       try {
-        console.log(`Starting Puppeteer audit attempt ${attempt}/${maxRetries} for URL:`, url)
+        console.log(`🚀 PRODUCTION: Starting Puppeteer audit attempt ${attempt}/${maxRetries} for URL:`, url)
         
         // Validate URL
         new URL(url)
@@ -527,8 +545,13 @@ export class PuppeteerAuditService {
         // Check if Lighthouse should be enabled (can be disabled via environment variable)
         const lighthouseEnabled = process.env.ENABLE_LIGHTHOUSE !== 'false'
         
+        console.log('🔍 PRODUCTION: Lighthouse enabled check:', {
+          ENABLE_LIGHTHOUSE: process.env.ENABLE_LIGHTHOUSE,
+          lighthouseEnabled
+        })
+        
         if (lighthouseEnabled) {
-          console.log('🚀 Starting MANDATORY Lighthouse audit for dynamic scores...')
+          console.log('🚀 PRODUCTION: Starting MANDATORY Lighthouse audit for dynamic scores...')
           
           // Run Lighthouse with enhanced error handling and debugging
           try {
@@ -1185,10 +1208,10 @@ export class PuppeteerAuditService {
 
   private async runLighthouseAudit(url: string): Promise<any> {
     try {
-      console.log('🚀 Starting Lighthouse audit for:', url)
+      console.log('🚀 PRODUCTION: Starting Lighthouse audit for:', url)
       
       // Use child process method for Next.js compatibility
-      console.log('📦 Using child process method for Next.js compatibility')
+      console.log('📦 PRODUCTION: Using child process method for Next.js compatibility')
       const result = await runLighthouseInChildProcess(url)
       
       if (!result) {
