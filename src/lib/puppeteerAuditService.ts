@@ -127,6 +127,34 @@ async function runLighthouse() {
       }
     }
     
+    // If still no Chrome found, try to find any browser executables
+    if (!chromePath) {
+      try {
+        const { execSync } = require('child_process')
+        const findResult = execSync('find /usr -name "*browser*" -type f -executable 2>/dev/null | head -5', { encoding: 'utf8' })
+        if (findResult && findResult.trim()) {
+          console.log('🔍 Found browser executables:', findResult.trim())
+        }
+      } catch (e) {
+        console.log('⚠️ browser find command failed')
+      }
+    }
+    
+    // If still no Chrome found, try to find any executable in /usr/bin
+    if (!chromePath) {
+      try {
+        const { execSync } = require('child_process')
+        const lsResult = execSync('ls -la /usr/bin/ | grep -E "(chrome|chromium|browser)"', { encoding: 'utf8' })
+        if (lsResult && lsResult.trim()) {
+          console.log('🔍 Chrome-related files in /usr/bin:', lsResult.trim())
+        } else {
+          console.log('🔍 No Chrome-related files found in /usr/bin')
+        }
+      } catch (e) {
+        console.log('⚠️ Could not list /usr/bin contents')
+      }
+    }
+    
     if (!chromePath) {
       console.log('❌ No Chrome executable found. Available paths checked:', [
         process.env.CHROME_PATH,
