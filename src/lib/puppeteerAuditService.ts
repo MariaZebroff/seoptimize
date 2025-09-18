@@ -57,6 +57,7 @@ async function runLighthouseAttempt(url: string): Promise<any> {
     
     const lighthouseScript = `
 const path = require('path')
+const fs = require('fs')
 const lighthouse = require(path.join('${process.cwd()}', 'node_modules', 'lighthouse')).default || require(path.join('${process.cwd()}', 'node_modules', 'lighthouse'))
 const chromeLauncher = require(path.join('${process.cwd()}', 'node_modules', 'chrome-launcher'))
 
@@ -64,8 +65,35 @@ async function runLighthouse() {
   let chrome = null
   try {
     console.log('🚀 Launching Chrome for Lighthouse...')
+    
+    // Auto-detect Chrome path for Railway
+    const possibleChromePaths = [
+      process.env.CHROME_PATH,
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      '/usr/bin/google-chrome',
+      '/opt/google/chrome/chrome',
+      '/usr/local/bin/chrome'
+    ]
+    
+    let chromePath = null
+    for (const chromePathOption of possibleChromePaths) {
+      if (chromePathOption && fs.existsSync(chromePathOption)) {
+        chromePath = chromePathOption
+        console.log('✅ Found Chrome at:', chromePath)
+        break
+      }
+    }
+    
+    if (!chromePath) {
+      console.log('❌ No Chrome executable found. Available paths checked:', possibleChromePaths)
+      throw new Error('Chrome executable not found')
+    }
+    
     // Enhanced Chrome launcher options for better reliability
     chrome = await chromeLauncher.launch({
+      chromePath: chromePath,
       chromeFlags: [
         '--headless',
         '--no-sandbox',
