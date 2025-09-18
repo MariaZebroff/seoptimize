@@ -74,20 +74,52 @@ async function runLighthouse() {
       '/usr/bin/chromium',
       '/usr/bin/google-chrome',
       '/opt/google/chrome/chrome',
-      '/usr/local/bin/chrome'
+      '/usr/local/bin/chrome',
+      '/usr/bin/chrome',
+      '/snap/bin/chromium',
+      '/usr/bin/chromium-browser-stable',
+      '/usr/bin/google-chrome-beta',
+      '/usr/bin/google-chrome-unstable'
     ]
     
+    // Also try to find Chrome using which command
     let chromePath = null
-    for (const chromePathOption of possibleChromePaths) {
-      if (chromePathOption && fs.existsSync(chromePathOption)) {
-        chromePath = chromePathOption
-        console.log('✅ Found Chrome at:', chromePath)
-        break
+    
+    // First check if we can find Chrome using which
+    try {
+      const { execSync } = require('child_process')
+      const whichResult = execSync('which google-chrome-stable 2>/dev/null || which chromium-browser 2>/dev/null || which chromium 2>/dev/null || which google-chrome 2>/dev/null', { encoding: 'utf8' })
+      if (whichResult && whichResult.trim()) {
+        chromePath = whichResult.trim()
+        console.log('✅ Found Chrome using which command:', chromePath)
+      }
+    } catch (e) {
+      console.log('⚠️ which command failed, trying direct paths...')
+    }
+    
+    // If which didn't work, try direct paths
+    if (!chromePath) {
+      for (const chromePathOption of possibleChromePaths) {
+        if (chromePathOption && fs.existsSync(chromePathOption)) {
+          chromePath = chromePathOption
+          console.log('✅ Found Chrome at:', chromePath)
+          break
+        }
       }
     }
     
     if (!chromePath) {
       console.log('❌ No Chrome executable found. Available paths checked:', possibleChromePaths)
+      
+      // Try to list what's actually in /usr/bin
+      try {
+        const { execSync } = require('child_process')
+        const lsResult = execSync('ls -la /usr/bin/ | grep -i chrome', { encoding: 'utf8' })
+        console.log('🔍 Chrome-related files in /usr/bin:', lsResult)
+      } catch (e) {
+        console.log('⚠️ Could not list /usr/bin contents')
+      }
+      
       throw new Error('Chrome executable not found')
     }
     
