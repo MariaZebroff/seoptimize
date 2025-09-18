@@ -1,12 +1,12 @@
 #!/bin/bash
 
-echo "🚀 Installing Chrome for Railway..."
+echo "🚀 Installing Chrome for Railway (optimized)..."
 
-# Update package list
+# Update package list (faster with --no-install-recommends)
 apt-get update
 
 # Install Chrome dependencies
-apt-get install -y wget gnupg
+apt-get install -y --no-install-recommends wget gnupg ca-certificates
 
 # Add Google Chrome repository
 wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
@@ -15,8 +15,8 @@ echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /et
 # Update package list again
 apt-get update
 
-# Install Google Chrome
-apt-get install -y google-chrome-stable
+# Install Google Chrome with minimal dependencies
+apt-get install -y --no-install-recommends google-chrome-stable
 
 # Verify installation
 if [ -f "/usr/bin/google-chrome-stable" ]; then
@@ -26,5 +26,9 @@ else
     echo "❌ Chrome installation failed"
     exit 1
 fi
+
+# Clean up to reduce image size
+apt-get clean
+rm -rf /var/lib/apt/lists/*
 
 echo "🎉 Chrome installation completed!"

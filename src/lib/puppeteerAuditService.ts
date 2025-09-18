@@ -85,9 +85,9 @@ async function runLighthouse() {
     if (!chromePath) {
       const possibleChromePaths = [
         process.env.CHROME_PATH,
-        '/usr/bin/google-chrome-stable',
         '/usr/bin/chromium-browser',
         '/usr/bin/chromium',
+        '/usr/bin/google-chrome-stable',
         '/usr/bin/google-chrome',
         '/opt/google/chrome/chrome',
         '/usr/local/bin/chrome',
