@@ -170,7 +170,10 @@ async function runLighthouse() {
         '/usr/bin/google-chrome-beta',
         '/usr/bin/google-chrome-unstable'
       ])
-      throw new Error('Chrome executable not found - please set CHROME_PATH environment variable')
+      console.log('💡 Chrome not found. Please install Chrome or set CHROME_PATH environment variable.')
+      console.log('💡 For Railway, add this to your environment variables:')
+      console.log('💡 CHROME_PATH=/usr/bin/google-chrome-stable')
+      throw new Error('Chrome executable not found - please install Chrome or set CHROME_PATH environment variable')
     }
     
     // Enhanced Chrome launcher options for better reliability

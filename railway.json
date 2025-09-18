@@ -1,0 +1,17 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "chmod +x install-chrome.sh && ./install-chrome.sh && npm run build"
+  },
+  "deploy": {
+    "startCommand": "npm run start",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 30000,
+    "restartPolicy": {
+      "onFailure": {
+        "maxRetries": 5
+      }
+    }
+  }
+}
