@@ -66,66 +66,54 @@ async function runLighthouse() {
   try {
     console.log('🚀 Launching Chrome for Lighthouse...')
     
-    // Auto-detect Chrome path for Railway
-    const possibleChromePaths = [
-      process.env.CHROME_PATH,
-      '/usr/bin/google-chrome-stable',
-      '/usr/bin/chromium-browser',
-      '/usr/bin/chromium',
-      '/usr/bin/google-chrome',
-      '/opt/google/chrome/chrome',
-      '/usr/local/bin/chrome',
-      '/usr/bin/chrome',
-      '/snap/bin/chromium',
-      '/usr/bin/chromium-browser-stable',
-      '/usr/bin/google-chrome-beta',
-      '/usr/bin/google-chrome-unstable'
-    ]
-    
-    // Also try to find Chrome using which command
+    // Use Puppeteer's bundled Chrome for Railway
     let chromePath = null
     
-    // First check if we can find Chrome using which
+    // First try to find Puppeteer's bundled Chrome
     try {
-      const { execSync } = require('child_process')
-      const whichResult = execSync('which google-chrome-stable 2>/dev/null || which chromium-browser 2>/dev/null || which chromium 2>/dev/null || which google-chrome 2>/dev/null', { encoding: 'utf8' })
-      if (whichResult && whichResult.trim()) {
-        chromePath = whichResult.trim()
-        console.log('✅ Found Chrome using which command:', chromePath)
+      const puppeteer = require('puppeteer')
+      const executablePath = puppeteer.executablePath()
+      if (executablePath && fs.existsSync(executablePath)) {
+        chromePath = executablePath
+        console.log('✅ Found Puppeteer bundled Chrome at:', chromePath)
       }
     } catch (e) {
-      console.log('⚠️ which command failed, trying direct paths...')
+      console.log('⚠️ Could not get Puppeteer executable path:', e.message)
     }
     
-    // If which didn't work, try direct paths
+    // If Puppeteer Chrome not found, try system Chrome paths
     if (!chromePath) {
+      const possibleChromePaths = [
+        process.env.CHROME_PATH,
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/usr/bin/google-chrome',
+        '/opt/google/chrome/chrome',
+        '/usr/local/bin/chrome',
+        '/usr/bin/chrome',
+        '/snap/bin/chromium',
+        '/usr/bin/chromium-browser-stable',
+        '/usr/bin/google-chrome-beta',
+        '/usr/bin/google-chrome-unstable'
+      ]
+      
       for (const chromePathOption of possibleChromePaths) {
         if (chromePathOption && fs.existsSync(chromePathOption)) {
           chromePath = chromePathOption
-          console.log('✅ Found Chrome at:', chromePath)
+          console.log('✅ Found system Chrome at:', chromePath)
           break
         }
       }
     }
     
     if (!chromePath) {
-      console.log('❌ No Chrome executable found. Available paths checked:', possibleChromePaths)
-      
-      // Try to list what's actually in /usr/bin
-      try {
-        const { execSync } = require('child_process')
-        const lsResult = execSync('ls -la /usr/bin/ | grep -i chrome', { encoding: 'utf8' })
-        console.log('🔍 Chrome-related files in /usr/bin:', lsResult)
-      } catch (e) {
-        console.log('⚠️ Could not list /usr/bin contents')
-      }
-      
-      throw new Error('Chrome executable not found')
+      console.log('❌ No Chrome executable found. Trying to use chrome-launcher without explicit path...')
+      // Don't throw error, let chrome-launcher try to find Chrome itself
     }
     
     // Enhanced Chrome launcher options for better reliability
-    chrome = await chromeLauncher.launch({
-      chromePath: chromePath,
+    const launchOptions = {
       chromeFlags: [
         '--headless',
         '--no-sandbox',
@@ -151,7 +139,14 @@ async function runLighthouse() {
         '--disable-renderer-backgrounding'
       ],
       logLevel: 'error'
-    })
+    }
+    
+    // Only add chromePath if we found one
+    if (chromePath) {
+      launchOptions.chromePath = chromePath
+    }
+    
+    chrome = await chromeLauncher.launch(launchOptions)
     
     console.log('✅ Chrome launched on port:', chrome.port)
     
