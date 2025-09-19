@@ -20,6 +20,8 @@ async function runLighthouseDirect(url: string): Promise<any> {
     // Find Chrome executable
     let chromePath = process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH
     
+    console.log('🔍 Initial Chrome path:', chromePath)
+    
     if (!chromePath) {
       const possiblePaths = [
         '/usr/bin/chromium-browser',
@@ -29,28 +31,32 @@ async function runLighthouseDirect(url: string): Promise<any> {
         '/opt/google/chrome/chrome'
       ]
       
+      console.log('🔍 Searching for Chrome in possible paths...')
       for (const path of possiblePaths) {
         try {
           const fs = require('fs')
+          console.log('🔍 Checking path:', path)
           if (fs.existsSync(path)) {
             chromePath = path
+            console.log('✅ Found Chrome at:', path)
             break
           }
         } catch (e) {
-          // Continue to next path
+          console.log('❌ Error checking path:', path, e.message)
         }
       }
     }
     
     if (!chromePath) {
-      throw new Error('Chrome executable not found')
+      console.log('⚠️  No Chrome path specified, letting chrome-launcher find it automatically')
     }
     
     console.log('✅ Found Chrome at:', chromePath)
     
     // Launch Chrome with minimal configuration
-    const chrome = await chromeLauncher.launch({
-      chromePath: chromePath,
+    console.log('🚀 Launching Chrome with path:', chromePath)
+    
+    const launchOptions: any = {
       chromeFlags: [
         '--headless',
         '--no-sandbox',
@@ -77,7 +83,14 @@ async function runLighthouseDirect(url: string): Promise<any> {
         '--no-zygote'
       ],
       logLevel: 'error'
-    })
+    }
+    
+    // Only add chromePath if we found one
+    if (chromePath) {
+      launchOptions.chromePath = chromePath
+    }
+    
+    const chrome = await chromeLauncher.launch(launchOptions)
     
     console.log('✅ Chrome launched on port:', chrome.port)
     
