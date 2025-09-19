@@ -29,6 +29,16 @@ else
     echo "⚠️ No Chrome/Chromium found - Lighthouse may not work"
 fi
 
+# Start virtual display for Chrome (if available)
+if command -v Xvfb &> /dev/null; then
+    echo "🖥️ Starting virtual display for Chrome..."
+    Xvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset &
+    export DISPLAY=:99
+    echo "✅ Virtual display started on :99"
+else
+    echo "⚠️ Xvfb not available - Chrome may have issues in headless mode"
+fi
+
 # Start the application
 echo "🚀 Starting Next.js application..."
 exec npm start

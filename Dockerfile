@@ -43,7 +43,15 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
+    xvfb \
+    dbus \
     && rm -rf /var/cache/apk/*
+
+# Set memory limits and Chrome environment variables
+ENV NODE_OPTIONS="--max-old-space-size=4096" \
+    CHROME_BIN=/usr/bin/chromium-browser \
+    CHROME_PATH=/usr/bin/chromium-browser \
+    DISPLAY=:99
 
 # Tell Puppeteer to skip installing Chromium. We'll be using the installed package.
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \

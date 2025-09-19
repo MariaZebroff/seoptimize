@@ -202,13 +202,13 @@ async function runLighthouse() {
     chrome = await launcher.launch({
       chromePath: chromePath,
       chromeFlags: [
-        '--headless',
+        '--headless=new',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
+        '--disable-features=VizDisplayCompositor,TranslateUI,BlinkGenPropertyTrees,AudioServiceOutOfProcess',
         '--disable-blink-features=AutomationControlled',
         '--disable-extensions',
         '--disable-plugins',
@@ -223,9 +223,41 @@ async function runLighthouse() {
         '--disable-ipc-flooding-protection',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
+        '--disable-renderer-backgrounding',
+        '--disable-background-networking',
+        '--disable-component-extensions-with-background-pages',
+        '--disable-domain-reliability',
+        '--disable-hang-monitor',
+        '--disable-prompt-on-repost',
+        '--disable-client-side-phishing-detection',
+        '--disable-component-update',
+        '--disable-print-preview',
+        '--disable-speech-api',
+        '--disable-file-system',
+        '--disable-permissions-api',
+        '--disable-presentation-api',
+        '--disable-remote-fonts',
+        '--disable-speech-synthesis-api',
+        '--disable-webgl',
+        '--disable-webgl2',
+        '--disable-xss-auditor',
+        '--force-color-profile=srgb',
+        '--metrics-recording-only',
+        '--enable-automation',
+        '--password-store=basic',
+        '--use-mock-keychain',
+        '--memory-pressure-off',
+        '--max_old_space_size=4096',
+        '--single-process',
+        '--no-zygote',
+        '--disable-software-rasterizer',
+        '--disable-field-trial-config',
+        '--disable-back-forward-cache'
       ],
-      logLevel: 'error'
+      logLevel: 'error',
+      handleSIGINT: false,
+      handleSIGTERM: false,
+      handleSIGHUP: false
     })
     
     console.log('✅ Chrome launched on port:', chrome.port)
@@ -235,8 +267,8 @@ async function runLighthouse() {
       output: 'json',
       onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
       port: chrome.port,
-      maxWaitForFcp: 15000,
-      maxWaitForLoad: 35000,
+      maxWaitForFcp: 30000,
+      maxWaitForLoad: 60000,
       settings: {
         throttlingMethod: 'simulate',
         throttling: {
@@ -246,13 +278,42 @@ async function runLighthouse() {
           requestLatencyMs: 0,
           downloadThroughputKbps: 0,
           uploadThroughputKbps: 0
-        }
+        },
+        maxWaitForFcp: 30000,
+        maxWaitForLoad: 60000,
+        skipAudits: [
+          'screenshot-thumbnails',
+          'final-screenshot',
+          'full-page-screenshot'
+        ],
+        disableStorageReset: false,
+        emulatedFormFactor: 'desktop',
+        locale: 'en-US'
       }
     }
     
     console.log('🔍 Running Lighthouse audit...')
     const lighthouseFunc = lighthouse.default || lighthouse
-    const result = await lighthouseFunc('${url}', options)
+    
+    // Add timeout and retry logic for stability
+    const runLighthouseWithRetry = async (url: string, options: any, maxRetries = 2) => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`🔍 Lighthouse attempt ${attempt}/${maxRetries}...`)
+          const result = await lighthouseFunc(url, options)
+          return result
+        } catch (error) {
+          console.log(`❌ Lighthouse attempt ${attempt} failed:`, error.message)
+          if (attempt === maxRetries) {
+            throw error
+          }
+          console.log(`⏳ Waiting 2 seconds before retry...`)
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+      }
+    }
+    
+    const result = await runLighthouseWithRetry('${url}', options)
     
     console.log('🔍 Lighthouse audit result debug:')
     console.log('   Result exists:', !!result)
