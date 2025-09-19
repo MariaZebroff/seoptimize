@@ -118,6 +118,10 @@ async function runLighthouseDirect(url: string): Promise<any> {
     
   } catch (error) {
     console.error('❌ Lighthouse direct execution failed:', error instanceof Error ? error.message : 'Unknown error')
+    console.error('🔍 Error details:', error)
+    if (error instanceof Error && error.stack) {
+      console.error('🔍 Stack trace:', error.stack)
+    }
     return null
   }
 }
@@ -918,10 +922,15 @@ export class PuppeteerAuditService {
           console.log('🚀 PRODUCTION: Starting Lighthouse audit for dynamic scores...')
           
           try {
+            console.log('🔍 Attempting direct Lighthouse execution...')
             // Use direct Lighthouse execution instead of child process
             const lighthouseResults = await runLighthouseDirect(url)
             
-            if (lighthouseResults) {
+            console.log('🔍 Lighthouse execution completed, checking results...')
+            console.log('🔍 lighthouseResults type:', typeof lighthouseResults)
+            console.log('🔍 lighthouseResults value:', lighthouseResults ? 'exists' : 'null/undefined')
+            
+            if (lighthouseResults && lighthouseResults.categories) {
               console.log('✅ Lighthouse audit completed successfully!')
               console.log('📊 Raw Lighthouse results:')
               console.log('   Performance score:', lighthouseResults.categories?.performance?.score)
@@ -939,13 +948,15 @@ export class PuppeteerAuditService {
                 console.log(`   Best Practices: ${detailedResults['best-practices'].score}`)
                 console.log(`   SEO: ${detailedResults.seo.score}`)
               } else {
-                console.log('❌ Failed to process Lighthouse results')
+                console.log('❌ Failed to process Lighthouse results - detailedResults is null')
               }
             } else {
-              console.log('❌ Lighthouse audit returned no results')
+              console.log('❌ Lighthouse audit returned no results or invalid structure')
+              console.log('🔍 Result structure:', lighthouseResults ? Object.keys(lighthouseResults) : 'null')
             }
           } catch (lighthouseError) {
-            console.log('❌ Lighthouse audit failed:', lighthouseError instanceof Error ? lighthouseError.message : 'Unknown error')
+            console.log('❌ Lighthouse audit failed with error:', lighthouseError instanceof Error ? lighthouseError.message : 'Unknown error')
+            console.log('🔍 Error stack:', lighthouseError instanceof Error ? lighthouseError.stack : 'No stack trace')
             console.log('🔧 Falling back to enhanced static scores')
           }
         } else {
