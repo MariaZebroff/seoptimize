@@ -198,7 +198,7 @@ async function runLighthouse() {
     }
     
     // Use Puppeteer directly for better reliability in containers
-    const puppeteer = require('puppeteer-core')
+    const puppeteer = require('puppeteer')
     
     console.log('Launching Chrome with Puppeteer...')
     const browser = await puppeteer.launch({
