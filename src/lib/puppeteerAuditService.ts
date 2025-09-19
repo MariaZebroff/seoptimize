@@ -1101,7 +1101,7 @@ export class PuppeteerAuditService {
       })
     } catch (error) {
       console.error('❌ Enhanced SEO analysis failed:', error instanceof Error ? error.message : 'Unknown error')
-      enhancedSEOAnalysis = null
+      enhancedSEOAnalysis = undefined
     }
 
     // Perform comprehensive broken link checking
@@ -1466,34 +1466,63 @@ export class PuppeteerAuditService {
       const seoScore = categories.seo?.score
       
       console.log('   Raw scores:', { perfScore, accScore, bpScore, seoScore })
-      console.log('   Calculated scores:', {
-        performance: Math.round(perfScore * 100) || 0,
-        accessibility: Math.round(accScore * 100) || 0,
-        bestPractices: Math.round(bpScore * 100) || 0,
-        seo: Math.round(seoScore * 100) || 0
+      
+      // Check if scores are null and try to calculate from audits
+      let finalPerfScore = perfScore
+      let finalAccScore = accScore
+      let finalBpScore = bpScore
+      let finalSeoScore = seoScore
+      
+      if (perfScore === null || accScore === null || bpScore === null || seoScore === null) {
+        console.log('⚠️ Some category scores are null, attempting to calculate from individual audits...')
+        
+        // Try to calculate scores from individual audit results
+        if (perfScore === null) {
+          finalPerfScore = this.calculateCategoryScoreFromAudits(audits, 'performance')
+          console.log('   Calculated Performance score from audits:', finalPerfScore)
+        }
+        if (accScore === null) {
+          finalAccScore = this.calculateCategoryScoreFromAudits(audits, 'accessibility')
+          console.log('   Calculated Accessibility score from audits:', finalAccScore)
+        }
+        if (bpScore === null) {
+          finalBpScore = this.calculateCategoryScoreFromAudits(audits, 'best-practices')
+          console.log('   Calculated Best Practices score from audits:', finalBpScore)
+        }
+        if (seoScore === null) {
+          finalSeoScore = this.calculateCategoryScoreFromAudits(audits, 'seo')
+          console.log('   Calculated SEO score from audits:', finalSeoScore)
+        }
+      }
+      
+      console.log('   Final calculated scores:', {
+        performance: Math.round(finalPerfScore * 100) || 0,
+        accessibility: Math.round(finalAccScore * 100) || 0,
+        bestPractices: Math.round(finalBpScore * 100) || 0,
+        seo: Math.round(finalSeoScore * 100) || 0
       })
 
       const result = {
         performance: {
-          score: Math.round(perfScore * 100) || 0,
+          score: Math.round(finalPerfScore * 100) || 0,
           metrics: performanceMetrics,
           issues: performanceIssues,
           opportunities: performanceOpportunities
         },
         accessibility: {
-          score: Math.round(accScore * 100) || 0,
+          score: Math.round(finalAccScore * 100) || 0,
           issues: accessibilityIssues,
           passedAudits: accessibilityPassed,
           failedAudits: accessibilityFailed
         },
         'best-practices': {
-          score: Math.round(bpScore * 100) || 0,
+          score: Math.round(finalBpScore * 100) || 0,
           issues: bestPracticesIssues,
           passedAudits: bestPracticesPassed,
           failedAudits: bestPracticesFailed
         },
         seo: {
-          score: Math.round(seoScore * 100) || 0,
+          score: Math.round(finalSeoScore * 100) || 0,
           issues: seoIssues,
           passedAudits: seoPassed,
           failedAudits: seoFailed
@@ -1600,5 +1629,39 @@ export class PuppeteerAuditService {
     }
     
     return categoryMappings[category as keyof typeof categoryMappings]?.includes(auditId) || false
+  }
+
+  private calculateCategoryScoreFromAudits(audits: any, category: string): number {
+    console.log(`🔍 Calculating ${category} score from individual audits...`)
+    
+    const categoryAudits = Object.entries(audits).filter(([auditId, audit]: [string, any]) => {
+      return this.isCategoryAudit(auditId, category) && audit && audit.score !== null
+    })
+    
+    console.log(`   Found ${categoryAudits.length} valid audits for ${category}`)
+    
+    if (categoryAudits.length === 0) {
+      console.log(`   No valid audits found for ${category}, returning 0`)
+      return 0
+    }
+    
+    // Calculate weighted average score
+    let totalWeight = 0
+    let weightedScore = 0
+    
+    categoryAudits.forEach(([auditId, audit]: [string, any]) => {
+      const weight = audit.weight || 1
+      const score = audit.score || 0
+      
+      totalWeight += weight
+      weightedScore += score * weight
+      
+      console.log(`   ${auditId}: score=${score}, weight=${weight}`)
+    })
+    
+    const finalScore = totalWeight > 0 ? weightedScore / totalWeight : 0
+    console.log(`   Final ${category} score: ${finalScore} (weighted average)`)
+    
+    return finalScore
   }
 }
