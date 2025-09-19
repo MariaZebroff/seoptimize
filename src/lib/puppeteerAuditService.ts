@@ -159,7 +159,7 @@ async function getPageSpeedInsights(url: string): Promise<any> {
     
     // Add timeout to prevent hanging
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
     
     const response = await fetch(apiUrl, {
       method: 'GET',
@@ -223,7 +223,7 @@ async function getPageSpeedInsights(url: string): Promise<any> {
     
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.error('❌ PageSpeed Insights API timed out after 30 seconds')
+      console.error('❌ PageSpeed Insights API timed out after 15 seconds')
     } else {
       console.error('❌ PageSpeed Insights API failed:', error instanceof Error ? error.message : 'Unknown error')
     }
@@ -1078,10 +1078,12 @@ export class PuppeteerAuditService {
           lighthouseEnabled
         })
         
-        // Use PageSpeed Insights API for reliable dynamic scores
+        // Try multiple approaches for real Lighthouse scores
         if (lighthouseEnabled) {
-          console.log('🚀 PRODUCTION: Starting PageSpeed Insights API for dynamic scores...')
+          console.log('🚀 PRODUCTION: Starting Lighthouse audit for dynamic scores...')
           
+          // Try PageSpeed Insights API first (faster)
+          console.log('🔍 Attempting PageSpeed Insights API...')
           try {
             const pageSpeedResults = await getPageSpeedInsights(url)
             
@@ -1110,10 +1112,48 @@ export class PuppeteerAuditService {
             }
           } catch (pageSpeedError) {
             console.log('❌ PageSpeed Insights API failed:', pageSpeedError instanceof Error ? pageSpeedError.message : 'Unknown error')
-            console.log('🔧 Falling back to enhanced static scores')
+          }
+          
+          // If PageSpeed failed, try direct Lighthouse execution
+          if (!detailedResults) {
+            console.log('🔄 PageSpeed failed, trying direct Lighthouse execution...')
+            try {
+              const lighthouseResults = await runLighthouseDirect(url)
+              
+              if (lighthouseResults) {
+                console.log('✅ Direct Lighthouse execution completed successfully!')
+                console.log('📊 Raw Lighthouse results:')
+                console.log('   Performance score:', lighthouseResults.categories?.performance?.score)
+                console.log('   Accessibility score:', lighthouseResults.categories?.accessibility?.score)
+                console.log('   Best Practices score:', lighthouseResults.categories?.['best-practices']?.score)
+                console.log('   SEO score:', lighthouseResults.categories?.seo?.score)
+                
+                console.log('📊 Processing Lighthouse results...')
+                detailedResults = this.processLighthouseResults(lighthouseResults)
+                
+                if (detailedResults) {
+                  console.log('🎯 Dynamic scores extracted from direct Lighthouse:')
+                  console.log(`   Performance: ${detailedResults.performance.score}`)
+                  console.log(`   Accessibility: ${detailedResults.accessibility.score}`)
+                  console.log(`   Best Practices: ${detailedResults['best-practices'].score}`)
+                  console.log(`   SEO: ${detailedResults.seo.score}`)
+                } else {
+                  console.log('❌ Failed to process Lighthouse results - detailedResults is null')
+                }
+              } else {
+                console.log('❌ Direct Lighthouse execution returned no results')
+              }
+            } catch (lighthouseError) {
+              console.log('❌ Direct Lighthouse execution failed:', lighthouseError instanceof Error ? lighthouseError.message : 'Unknown error')
+            }
+          }
+          
+          // If both failed, use enhanced static scores
+          if (!detailedResults) {
+            console.log('🔧 Both PageSpeed and direct Lighthouse failed, using enhanced static scores')
           }
         } else {
-          console.log('⚠️  PageSpeed Insights API disabled via ENABLE_LIGHTHOUSE=false')
+          console.log('⚠️  Lighthouse audit disabled via ENABLE_LIGHTHOUSE=false')
         }
 
         // Use Lighthouse scores when available, otherwise fall back to calculated scores
