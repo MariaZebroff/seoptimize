@@ -1179,7 +1179,8 @@ export class PuppeteerAuditService {
                   performance: { score: puppeteerLighthouseResults.performance },
                   accessibility: { score: puppeteerLighthouseResults.accessibility },
                   'best-practices': { score: puppeteerLighthouseResults.bestPractices },
-                  seo: { score: puppeteerLighthouseResults.seo }
+                  seo: { score: puppeteerLighthouseResults.seo },
+                  performanceMetrics: puppeteerLighthouseResults.performanceMetrics
                 }
                 
                 console.log('🎯 Dynamic scores extracted from Puppeteer Lighthouse simulation:')
@@ -1644,7 +1645,15 @@ export class PuppeteerAuditService {
         performance: performanceScore,
         accessibility: accessibilityScore,
         seo: seoScore,
-        bestPractices: bestPracticesScore
+        bestPractices: bestPracticesScore,
+        performanceMetrics: {
+          fcp: metrics.fcp,
+          lcp: metrics.lcp,
+          cls: 0, // CLS requires more complex measurement
+          fid: 0, // FID requires more complex measurement
+          loadTime: metrics.loadTime,
+          domContentLoaded: metrics.domContentLoaded
+        }
       }
       
     } catch (error) {
