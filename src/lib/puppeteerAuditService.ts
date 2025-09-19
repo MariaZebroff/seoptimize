@@ -62,9 +62,25 @@ const path = require('path')
 const fs = require('fs')
 
 async function runLighthouse() {
-  // Dynamic import for ES modules with specific file paths
-  const chromeLauncher = await import(path.join('${process.cwd()}', 'node_modules', 'chrome-launcher', 'dist', 'index.js'))
-  const lighthouse = await import(path.join('${process.cwd()}', 'node_modules', 'lighthouse', 'core', 'index.js'))
+  // Try different import methods for compatibility
+  let chromeLauncher, lighthouse
+  
+  try {
+    // Try CommonJS require first
+    chromeLauncher = require(path.join('${process.cwd()}', 'node_modules', 'chrome-launcher'))
+    lighthouse = require(path.join('${process.cwd()}', 'node_modules', 'lighthouse'))
+    console.log('✅ Using CommonJS require for modules')
+  } catch (requireError) {
+    try {
+      // Fallback to dynamic import
+      chromeLauncher = await import(path.join('${process.cwd()}', 'node_modules', 'chrome-launcher', 'dist', 'index.js'))
+      lighthouse = await import(path.join('${process.cwd()}', 'node_modules', 'lighthouse', 'core', 'index.js'))
+      console.log('✅ Using dynamic import for modules')
+    } catch (importError) {
+      console.error('❌ Failed to load modules:', importError.message)
+      throw new Error('Failed to load Lighthouse modules')
+    }
+  }
   
   let chrome = null
   try {
@@ -182,7 +198,8 @@ async function runLighthouse() {
     }
     
     // Enhanced Chrome launcher options for better reliability
-    chrome = await chromeLauncher.default.launch({
+    const launcher = chromeLauncher.default || chromeLauncher
+    chrome = await launcher.launch({
       chromePath: chromePath,
       chromeFlags: [
         '--headless',
@@ -234,7 +251,8 @@ async function runLighthouse() {
     }
     
     console.log('🔍 Running Lighthouse audit...')
-    const result = await lighthouse.default('${url}', options)
+    const lighthouseFunc = lighthouse.default || lighthouse
+    const result = await lighthouseFunc('${url}', options)
     if (result && result.lhr) {
       console.log('✅ Lighthouse audit completed successfully!')
       console.log('📊 Scores:')
