@@ -1605,6 +1605,12 @@ export class PuppeteerAuditService {
         const h1Tags = document.querySelectorAll('h1').length
         const seoScore = (title ? 0.3 : 0) + (metaDescription ? 0.3 : 0) + (h1Tags > 0 ? 0.4 : 0)
         
+        // Best practices checks
+        const hasHttps = location.protocol === 'https:'
+        const hasViewport = document.querySelector('meta[name="viewport"]') !== null
+        const hasCharset = document.querySelector('meta[charset]') !== null
+        const bestPracticesScore = (hasHttps ? 0.4 : 0) + (hasViewport ? 0.3 : 0) + (hasCharset ? 0.3 : 0)
+        
         return {
           fcp,
           lcp,
@@ -1614,6 +1620,7 @@ export class PuppeteerAuditService {
           domComplexity,
           accessibilityScore,
           seoScore,
+          bestPracticesScore,
           totalResources,
           slowResources,
           domNodes,
@@ -1625,7 +1632,7 @@ export class PuppeteerAuditService {
       const performanceScore = this.calculateRealPerformanceScore(metrics)
       const accessibilityScore = Math.round(metrics.accessibilityScore * 100)
       const seoScore = Math.round(metrics.seoScore * 100)
-      const bestPracticesScore = this.calculateBestPracticesScore(metrics)
+      const bestPracticesScore = Math.round(metrics.bestPracticesScore * 100)
       
       console.log('📊 Puppeteer Lighthouse simulation results:')
       console.log(`   Performance: ${performanceScore} (FCP: ${metrics.fcp}ms, LCP: ${metrics.lcp}ms)`)
