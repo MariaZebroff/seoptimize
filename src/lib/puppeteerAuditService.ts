@@ -126,6 +126,81 @@ async function runLighthouseDirect(url: string): Promise<any> {
   }
 }
 
+// PageSpeed Insights API functions for reliable dynamic scores
+async function getPageSpeedInsights(url: string): Promise<any> {
+  console.log('🔍 Calling Google PageSpeed Insights API...')
+  
+  try {
+    const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY
+    if (!apiKey) {
+      throw new Error('GOOGLE_PAGESPEED_API_KEY environment variable not set')
+    }
+    
+    const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=${apiKey}&category=performance&category=accessibility&category=best-practices&category=seo&strategy=mobile`
+    
+    console.log('📡 Making request to PageSpeed Insights API...')
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+      timeout: 30000
+    })
+    
+    if (!response.ok) {
+      throw new Error(`PageSpeed API returned ${response.status}: ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    console.log('✅ PageSpeed Insights API response received')
+    
+    return data
+    
+  } catch (error) {
+    console.error('❌ PageSpeed Insights API failed:', error instanceof Error ? error.message : 'Unknown error')
+    return null
+  }
+}
+
+function processPageSpeedResults(pageSpeedData: any): any {
+  console.log('📊 Processing PageSpeed Insights results...')
+  
+  try {
+    if (!pageSpeedData || !pageSpeedData.lighthouseResult || !pageSpeedData.lighthouseResult.categories) {
+      console.log('❌ Invalid PageSpeed data structure')
+      return null
+    }
+    
+    const categories = pageSpeedData.lighthouseResult.categories
+    
+    const result = {
+      performance: {
+        score: categories.performance?.score ? Math.round(categories.performance.score * 100) : 0,
+        audits: categories.performance?.auditRefs || []
+      },
+      accessibility: {
+        score: categories.accessibility?.score ? Math.round(categories.accessibility.score * 100) : 0,
+        audits: categories.accessibility?.auditRefs || []
+      },
+      'best-practices': {
+        score: categories['best-practices']?.score ? Math.round(categories['best-practices'].score * 100) : 0,
+        audits: categories['best-practices']?.auditRefs || []
+      },
+      seo: {
+        score: categories.seo?.score ? Math.round(categories.seo.score * 100) : 0,
+        audits: categories.seo?.auditRefs || []
+      }
+    }
+    
+    console.log('✅ PageSpeed results processed successfully')
+    return result
+    
+  } catch (error) {
+    console.error('❌ Failed to process PageSpeed results:', error instanceof Error ? error.message : 'Unknown error')
+    return null
+  }
+}
+
 // Enhanced function to run Lighthouse with better error handling and retry logic
 async function runLighthouseInChildProcess(url: string): Promise<any> {
   const maxRetries = 3
@@ -917,50 +992,42 @@ export class PuppeteerAuditService {
           lighthouseEnabled
         })
         
-        // Run Lighthouse audit with improved stability
+        // Use PageSpeed Insights API for reliable dynamic scores
         if (lighthouseEnabled) {
-          console.log('🚀 PRODUCTION: Starting Lighthouse audit for dynamic scores...')
+          console.log('🚀 PRODUCTION: Starting PageSpeed Insights API for dynamic scores...')
           
           try {
-            console.log('🔍 Attempting direct Lighthouse execution...')
-            // Use direct Lighthouse execution instead of child process
-            const lighthouseResults = await runLighthouseDirect(url)
+            const pageSpeedResults = await getPageSpeedInsights(url)
             
-            console.log('🔍 Lighthouse execution completed, checking results...')
-            console.log('🔍 lighthouseResults type:', typeof lighthouseResults)
-            console.log('🔍 lighthouseResults value:', lighthouseResults ? 'exists' : 'null/undefined')
-            
-            if (lighthouseResults && lighthouseResults.categories) {
-              console.log('✅ Lighthouse audit completed successfully!')
-              console.log('📊 Raw Lighthouse results:')
-              console.log('   Performance score:', lighthouseResults.categories?.performance?.score)
-              console.log('   Accessibility score:', lighthouseResults.categories?.accessibility?.score)
-              console.log('   Best Practices score:', lighthouseResults.categories?.['best-practices']?.score)
-              console.log('   SEO score:', lighthouseResults.categories?.seo?.score)
+            if (pageSpeedResults) {
+              console.log('✅ PageSpeed Insights API completed successfully!')
+              console.log('📊 Raw PageSpeed results:')
+              console.log('   Performance score:', pageSpeedResults.lighthouseResult?.categories?.performance?.score)
+              console.log('   Accessibility score:', pageSpeedResults.lighthouseResult?.categories?.accessibility?.score)
+              console.log('   Best Practices score:', pageSpeedResults.lighthouseResult?.categories?.['best-practices']?.score)
+              console.log('   SEO score:', pageSpeedResults.lighthouseResult?.categories?.seo?.score)
               
-              console.log('📊 Processing Lighthouse results...')
-              detailedResults = this.processLighthouseResults(lighthouseResults)
+              console.log('📊 Processing PageSpeed results...')
+              detailedResults = processPageSpeedResults(pageSpeedResults)
               
               if (detailedResults) {
-                console.log('🎯 Dynamic scores extracted from Lighthouse:')
+                console.log('🎯 Dynamic scores extracted from PageSpeed Insights:')
                 console.log(`   Performance: ${detailedResults.performance.score}`)
                 console.log(`   Accessibility: ${detailedResults.accessibility.score}`)
                 console.log(`   Best Practices: ${detailedResults['best-practices'].score}`)
                 console.log(`   SEO: ${detailedResults.seo.score}`)
               } else {
-                console.log('❌ Failed to process Lighthouse results - detailedResults is null')
+                console.log('❌ Failed to process PageSpeed results - detailedResults is null')
               }
             } else {
-              console.log('❌ Lighthouse audit returned no results or invalid structure')
-              console.log('🔍 Result structure:', lighthouseResults ? Object.keys(lighthouseResults) : 'null')
+              console.log('❌ PageSpeed Insights API returned no results')
             }
-          } catch (lighthouseError) {
-            console.log('❌ Lighthouse audit failed with error:', lighthouseError instanceof Error ? lighthouseError.message : 'Unknown error')
-            console.log('🔍 Error stack:', lighthouseError instanceof Error ? lighthouseError.stack : 'No stack trace')
+          } catch (pageSpeedError) {
+            console.log('❌ PageSpeed Insights API failed:', pageSpeedError instanceof Error ? pageSpeedError.message : 'Unknown error')
             console.log('🔧 Falling back to enhanced static scores')
           }
         } else {
-          console.log('⚠️  Lighthouse audit disabled via ENABLE_LIGHTHOUSE=false')
+          console.log('⚠️  PageSpeed Insights API disabled via ENABLE_LIGHTHOUSE=false')
         }
 
         // Use Lighthouse scores when available, otherwise fall back to calculated scores
