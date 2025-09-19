@@ -6,10 +6,10 @@
   "deploy": {
     "startCommand": "npm run start",
     "healthcheckPath": "/api/health",
-    "healthcheckTimeout": 30000,
+    "healthcheckTimeout": 60000,
     "restartPolicy": {
       "onFailure": {
-        "maxRetries": 5
+        "maxRetries": 3
       }
     }
   }

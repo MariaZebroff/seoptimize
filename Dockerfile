@@ -61,6 +61,7 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built application from builder stage
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/start.sh ./start.sh
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs
@@ -73,5 +74,5 @@ USER nextjs
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"]
+# Start the application with proper signal handling
+CMD ["./start.sh"]
