@@ -252,15 +252,35 @@ async function runLighthouse() {
         '--no-zygote',
         '--disable-software-rasterizer',
         '--disable-field-trial-config',
-        '--disable-back-forward-cache'
+        '--disable-back-forward-cache',
+        '--remote-debugging-port=0',
+        '--remote-debugging-address=0.0.0.0'
       ],
       logLevel: 'error',
       handleSIGINT: false,
       handleSIGTERM: false,
-      handleSIGHUP: false
+      handleSIGHUP: false,
+      connectionPollInterval: 100,
+      maxConnectionRetries: 50
     })
     
-    console.log('✅ Chrome launched on port:', chrome.port)
+    console.log('Chrome launched on port:', chrome.port)
+    
+    // Wait for Chrome to be ready
+    console.log('Waiting for Chrome to be ready...')
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    
+    // Test Chrome connection
+    try {
+      const response = await fetch('http://127.0.0.1:' + chrome.port + '/json/version')
+      if (response.ok) {
+        console.log('Chrome WebSocket connection is ready')
+      } else {
+        console.log('Chrome WebSocket connection test failed, but continuing...')
+      }
+    } catch (error) {
+      console.log('Chrome WebSocket connection test failed:', error.message)
+    }
     
     const options = {
       logLevel: 'error',
