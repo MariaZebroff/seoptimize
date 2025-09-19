@@ -52,10 +52,13 @@ NEXTAUTH_SECRET=your_nextauth_secret
 
 The Dockerfile includes:
 
+- **Multi-stage build** for optimized production image
 - **Node.js 18 Alpine** base image
 - **Chromium browser** pre-installed
 - **All required dependencies** for Lighthouse
-- **Optimized build process**
+- **TailwindCSS and devDependencies** for build process
+- **Production-only dependencies** in final image
+- **Non-root user** for security
 
 ## 🔍 Chrome Path Detection
 
@@ -68,7 +71,27 @@ The application now checks these paths in order:
 5. `/usr/bin/google-chrome-stable`
 6. And other common paths...
 
-## 🧪 Testing Lighthouse
+## 🧪 Testing the Build
+
+### Local Docker Test (Optional)
+
+Test the Dockerfile locally before deploying:
+
+```bash
+# Make the test script executable
+chmod +x test-docker-build.sh
+
+# Run the test
+./test-docker-build.sh
+```
+
+This will:
+- Build the Docker image
+- Test if it starts correctly
+- Verify the application responds
+- Clean up test containers
+
+### Testing Lighthouse in Production
 
 After deployment, test with:
 
