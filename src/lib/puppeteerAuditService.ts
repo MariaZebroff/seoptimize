@@ -799,57 +799,10 @@ export class PuppeteerAuditService {
           lighthouseEnabled
         })
         
-        if (lighthouseEnabled) {
-          console.log('🚀 PRODUCTION: Starting MANDATORY Lighthouse audit for dynamic scores...')
-          
-          // Run Lighthouse with enhanced error handling and debugging
-          try {
-            // Add a timeout to prevent Lighthouse from hanging
-            const lighthousePromise = this.runLighthouseAudit(url)
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Lighthouse timeout')), 90000) // Increased to 90 seconds
-            )
-            
-            console.log('⏳ Waiting for Lighthouse results...')
-            lighthouseResults = await Promise.race([lighthousePromise, timeoutPromise])
-            
-            if (lighthouseResults) {
-              console.log('✅ Lighthouse audit completed successfully!')
-              console.log('📊 Raw Lighthouse results structure:')
-              console.log('   Categories:', Object.keys(lighthouseResults.categories || {}))
-              console.log('   Performance score:', lighthouseResults.categories?.performance?.score)
-              console.log('   Accessibility score:', lighthouseResults.categories?.accessibility?.score)
-              console.log('   Best Practices score:', lighthouseResults.categories?.['best-practices']?.score)
-              console.log('   SEO score:', lighthouseResults.categories?.seo?.score)
-              
-              console.log('📊 Processing Lighthouse results...')
-              detailedResults = this.processLighthouseResults(lighthouseResults)
-              
-              if (detailedResults) {
-                console.log('🎯 Dynamic scores extracted from Lighthouse:')
-                console.log(`   Performance: ${detailedResults.performance.score}`)
-                console.log(`   Accessibility: ${detailedResults.accessibility.score}`)
-                console.log(`   Best Practices: ${detailedResults['best-practices'].score}`)
-                console.log(`   SEO: ${detailedResults.seo.score}`)
-              } else {
-                console.log('❌ Failed to process Lighthouse results')
-                console.log('🔍 Debugging processLighthouseResults...')
-                console.log('   Input type:', typeof lighthouseResults)
-                console.log('   Input keys:', Object.keys(lighthouseResults || {}))
-              }
-            } else {
-              console.log('❌ Lighthouse audit returned no results')
-            }
-          } catch (lighthouseError) {
-            console.log('❌ Lighthouse audit failed:', lighthouseError instanceof Error ? lighthouseError.message : 'Unknown error')
-            console.log('🔧 This means you will get static scores instead of dynamic ones')
-            console.log('💡 To fix this, ensure Lighthouse dependencies are properly installed')
-            // Don't throw - just continue without Lighthouse data
-          }
-        } else {
-          console.log('⚠️  Lighthouse audit disabled via ENABLE_LIGHTHOUSE=false')
-          console.log('🔧 You will get static scores instead of dynamic ones')
-        }
+        // Skip Lighthouse audit in production due to stability issues
+        console.log('⚠️  PRODUCTION: Lighthouse audit disabled due to container stability issues')
+        console.log('🔧 Using enhanced static scores with realistic variations')
+        console.log('💡 This ensures reliable performance without Chrome connection issues')
 
         // Use Lighthouse scores when available, otherwise fall back to calculated scores
         const finalScores = detailedResults ? {
