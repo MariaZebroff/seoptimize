@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
+import { config, validateConfig } from "./config"
 
 // Get the correct redirect URL based on environment
 const getRedirectUrl = () => {
@@ -22,14 +23,18 @@ const getRedirectUrl = () => {
 
 // Supabase client
 export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+  config.supabase.url,
+  config.supabase.anonKey
 )
 
 // Check if environment variables are set
 const checkEnvVars = () => {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co') {
-    throw new Error('Please set up your Supabase environment variables. See QUICK-START.md for instructions.')
+  // Use the new validation function
+  if (!validateConfig()) {
+    // Only throw error in development or server-side
+    if (typeof window === 'undefined' || process.env.NODE_ENV === 'development') {
+      throw new Error('Please set up your Supabase environment variables. See QUICK-START.md for instructions.')
+    }
   }
 }
 
