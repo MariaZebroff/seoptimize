@@ -5,13 +5,18 @@ echo "🚀 Installing Chrome for REAL Lighthouse on Railway..."
 # Update package list
 apt-get update
 
-# Install Chrome dependencies
+# Install essential dependencies first
 apt-get install -y --no-install-recommends \
     wget \
     gnupg \
     ca-certificates \
+    curl \
+    lsb-release
+
+# Install Chrome dependencies with correct package names for Ubuntu 24.04
+apt-get install -y --no-install-recommends \
     fonts-liberation \
-    libasound2 \
+    libasound2t64 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
     libc6 \
@@ -21,7 +26,7 @@ apt-get install -y --no-install-recommends \
     libexpat1 \
     libfontconfig1 \
     libgbm1 \
-    libgcc1 \
+    libgcc-s1 \
     libglib2.0-0 \
     libgtk-3-0 \
     libnspr4 \
@@ -42,12 +47,11 @@ apt-get install -y --no-install-recommends \
     libxrender1 \
     libxss1 \
     libxtst6 \
-    lsb-release \
     xdg-utils
 
-# Add Google Chrome repository
-wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+# Add Google Chrome repository with proper GPG key handling
+curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
 
 # Update package list again
 apt-get update
