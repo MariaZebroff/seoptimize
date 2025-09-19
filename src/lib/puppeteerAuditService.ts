@@ -253,9 +253,21 @@ async function runLighthouse() {
     console.log('🔍 Running Lighthouse audit...')
     const lighthouseFunc = lighthouse.default || lighthouse
     const result = await lighthouseFunc('${url}', options)
+    
+    console.log('🔍 Lighthouse audit result debug:')
+    console.log('   Result exists:', !!result)
+    console.log('   Result.lhr exists:', !!(result && result.lhr))
+    console.log('   Result keys:', result ? Object.keys(result) : 'No result')
+    
     if (result && result.lhr) {
       console.log('✅ Lighthouse audit completed successfully!')
-      console.log('📊 Scores:')
+      console.log('📊 Raw category scores:')
+      console.log('   Performance raw:', result.lhr.categories.performance?.score)
+      console.log('   Accessibility raw:', result.lhr.categories.accessibility?.score)
+      console.log('   Best Practices raw:', result.lhr.categories['best-practices']?.score)
+      console.log('   SEO raw:', result.lhr.categories.seo?.score)
+      
+      console.log('📊 Calculated scores:')
       console.log('   Performance:', Math.round(result.lhr.categories.performance?.score * 100) || 'N/A')
       console.log('   Accessibility:', Math.round(result.lhr.categories.accessibility?.score * 100) || 'N/A')
       console.log('   Best Practices:', Math.round(result.lhr.categories['best-practices']?.score * 100) || 'N/A')
