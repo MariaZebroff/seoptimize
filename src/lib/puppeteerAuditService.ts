@@ -197,19 +197,17 @@ async function runLighthouse() {
       throw new Error('Chrome executable not found - please install Chrome or set CHROME_PATH environment variable')
     }
     
-    // Use chrome-launcher with system Chrome
+    // Use chrome-launcher with minimal, reliable configuration
     const launcher = chromeLauncher.default || chromeLauncher
     chrome = await launcher.launch({
       chromePath: chromePath,
       chromeFlags: [
-        '--headless=new',
+        '--headless',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--disable-web-security',
-        '--disable-features=VizDisplayCompositor,TranslateUI,BlinkGenPropertyTrees,AudioServiceOutOfProcess',
-        '--disable-blink-features=AutomationControlled',
         '--disable-extensions',
         '--disable-plugins',
         '--no-default-browser-check',
@@ -220,7 +218,6 @@ async function runLighthouse() {
         '--mute-audio',
         '--no-first-run',
         '--safebrowsing-disable-auto-update',
-        '--disable-ipc-flooding-protection',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
@@ -252,9 +249,7 @@ async function runLighthouse() {
         '--no-zygote',
         '--disable-software-rasterizer',
         '--disable-field-trial-config',
-        '--disable-back-forward-cache',
-        '--remote-debugging-port=0',
-        '--remote-debugging-address=0.0.0.0'
+        '--disable-back-forward-cache'
       ],
       logLevel: 'error',
       handleSIGINT: false,
@@ -264,20 +259,33 @@ async function runLighthouse() {
     
     console.log('Chrome launched on port:', chrome.port)
     
-    // Wait for Chrome to be ready
+    // Wait for Chrome to be ready with retry logic
     console.log('Waiting for Chrome to be ready...')
-    await new Promise(resolve => setTimeout(resolve, 5000))
+    let connectionReady = false
+    let attempts = 0
+    const maxAttempts = 10
     
-    // Test Chrome connection
-    try {
-      const response = await fetch('http://127.0.0.1:' + chrome.port + '/json/version')
-      if (response.ok) {
-        console.log('Chrome WebSocket connection is ready')
-      } else {
-        console.log('Chrome WebSocket connection test failed, but continuing...')
+    while (!connectionReady && attempts < maxAttempts) {
+      attempts++
+      console.log('Connection attempt ' + attempts + '/' + maxAttempts)
+      
+      try {
+        const response = await fetch('http://127.0.0.1:' + chrome.port + '/json/version')
+        if (response.ok) {
+          console.log('Chrome WebSocket connection is ready')
+          connectionReady = true
+        } else {
+          console.log('Connection test failed, waiting 1 second...')
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+      } catch (error) {
+        console.log('Connection test failed:', error.message + ', waiting 1 second...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
-    } catch (error) {
-      console.log('Chrome WebSocket connection test failed:', error.message)
+    }
+    
+    if (!connectionReady) {
+      console.log('Chrome connection not ready after ' + maxAttempts + ' attempts, but continuing...')
     }
     
     const options = {
