@@ -292,22 +292,22 @@ async function runLighthouse() {
       }
     }
     
-    console.log('🔍 Running Lighthouse audit...')
+    console.log('Running Lighthouse audit...')
     const lighthouseFunc = lighthouse.default || lighthouse
     
     // Add timeout and retry logic for stability
     const runLighthouseWithRetry = async (url: string, options: any, maxRetries = 2) => {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`🔍 Lighthouse attempt ${attempt}/${maxRetries}...`)
+          console.log('Lighthouse attempt ' + attempt + '/' + maxRetries + '...')
           const result = await lighthouseFunc(url, options)
           return result
         } catch (error) {
-          console.log(`❌ Lighthouse attempt ${attempt} failed:`, error.message)
+          console.log('Lighthouse attempt ' + attempt + ' failed:', error.message)
           if (attempt === maxRetries) {
             throw error
           }
-          console.log(`⏳ Waiting 2 seconds before retry...`)
+          console.log('Waiting 2 seconds before retry...')
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
       }
@@ -315,7 +315,7 @@ async function runLighthouse() {
     
     const result = await runLighthouseWithRetry('${url}', options)
     
-    console.log('🔍 Lighthouse audit result debug:')
+    console.log('Lighthouse audit result debug:')
     console.log('   Result exists:', !!result)
     console.log('   Result.lhr exists:', !!(result && result.lhr))
     console.log('   Result keys:', result ? Object.keys(result) : 'No result')
