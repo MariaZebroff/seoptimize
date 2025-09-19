@@ -197,14 +197,12 @@ async function runLighthouse() {
       throw new Error('Chrome executable not found - please install Chrome or set CHROME_PATH environment variable')
     }
     
-    // Use Puppeteer directly for better reliability in containers
-    const puppeteer = require('puppeteer')
-    
-    console.log('Launching Chrome with Puppeteer...')
-    const browser = await puppeteer.launch({
-      executablePath: chromePath,
-      headless: 'new',
-      args: [
+    // Use chrome-launcher with system Chrome
+    const launcher = chromeLauncher.default || chromeLauncher
+    chrome = await launcher.launch({
+      chromePath: chromePath,
+      chromeFlags: [
+        '--headless=new',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -254,22 +252,32 @@ async function runLighthouse() {
         '--no-zygote',
         '--disable-software-rasterizer',
         '--disable-field-trial-config',
-        '--disable-back-forward-cache'
-      ]
+        '--disable-back-forward-cache',
+        '--remote-debugging-port=0',
+        '--remote-debugging-address=0.0.0.0'
+      ],
+      logLevel: 'error',
+      handleSIGINT: false,
+      handleSIGTERM: false,
+      handleSIGHUP: false
     })
     
-    // Get the WebSocket URL from Puppeteer
-    const wsEndpoint = browser.wsEndpoint()
-    console.log('Chrome launched with WebSocket endpoint:', wsEndpoint)
+    console.log('Chrome launched on port:', chrome.port)
     
-    // Extract port from WebSocket URL
-    const portMatch = wsEndpoint.match(/:(\d+)/)
-    const port = portMatch ? portMatch[1] : '9222'
+    // Wait for Chrome to be ready
+    console.log('Waiting for Chrome to be ready...')
+    await new Promise(resolve => setTimeout(resolve, 5000))
     
-    // Create a chrome-launcher compatible object
-    chrome = {
-      port: parseInt(port),
-      kill: () => browser.close()
+    // Test Chrome connection
+    try {
+      const response = await fetch('http://127.0.0.1:' + chrome.port + '/json/version')
+      if (response.ok) {
+        console.log('Chrome WebSocket connection is ready')
+      } else {
+        console.log('Chrome WebSocket connection test failed, but continuing...')
+      }
+    } catch (error) {
+      console.log('Chrome WebSocket connection test failed:', error.message)
     }
     
     const options = {
