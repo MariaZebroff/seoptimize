@@ -8,6 +8,120 @@ let chromeLauncher: any = null
 
 // REAL Lighthouse only - no fallbacks!
 
+// Direct Lighthouse execution in main process
+async function runLighthouseDirect(url: string): Promise<any> {
+  console.log('🔍 Running Lighthouse directly in main process...')
+  
+  try {
+    // Import Lighthouse modules
+    const chromeLauncher = await import('chrome-launcher')
+    const lighthouse = await import('lighthouse')
+    
+    // Find Chrome executable
+    let chromePath = process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH
+    
+    if (!chromePath) {
+      const possiblePaths = [
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/google-chrome',
+        '/opt/google/chrome/chrome'
+      ]
+      
+      for (const path of possiblePaths) {
+        try {
+          const fs = require('fs')
+          if (fs.existsSync(path)) {
+            chromePath = path
+            break
+          }
+        } catch (e) {
+          // Continue to next path
+        }
+      }
+    }
+    
+    if (!chromePath) {
+      throw new Error('Chrome executable not found')
+    }
+    
+    console.log('✅ Found Chrome at:', chromePath)
+    
+    // Launch Chrome with minimal configuration
+    const chrome = await chromeLauncher.launch({
+      chromePath: chromePath,
+      chromeFlags: [
+        '--headless',
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--no-default-browser-check',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-translate',
+        '--hide-scrollbars',
+        '--mute-audio',
+        '--no-first-run',
+        '--safebrowsing-disable-auto-update',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--memory-pressure-off',
+        '--max_old_space_size=2048',
+        '--single-process',
+        '--no-zygote'
+      ],
+      logLevel: 'error'
+    })
+    
+    console.log('✅ Chrome launched on port:', chrome.port)
+    
+    // Wait for Chrome to be ready
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    
+    // Run Lighthouse
+    const options = {
+      logLevel: 'error',
+      output: 'json',
+      onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
+      port: chrome.port,
+      maxWaitForFcp: 15000,
+      maxWaitForLoad: 30000,
+      settings: {
+        throttlingMethod: 'simulate',
+        throttling: {
+          rttMs: 40,
+          throughputKbps: 10240,
+          cpuSlowdownMultiplier: 1
+        }
+      }
+    }
+    
+    console.log('🔍 Running Lighthouse audit...')
+    const result = await lighthouse.default(url, options)
+    
+    // Clean up
+    await chrome.kill()
+    
+    if (result && result.lhr) {
+      console.log('✅ Lighthouse audit completed successfully!')
+      return result.lhr
+    } else {
+      console.log('❌ Lighthouse returned no results')
+      return null
+    }
+    
+  } catch (error) {
+    console.error('❌ Lighthouse direct execution failed:', error instanceof Error ? error.message : 'Unknown error')
+    return null
+  }
+}
+
 // Enhanced function to run Lighthouse with better error handling and retry logic
 async function runLighthouseInChildProcess(url: string): Promise<any> {
   const maxRetries = 3
@@ -799,10 +913,44 @@ export class PuppeteerAuditService {
           lighthouseEnabled
         })
         
-        // Skip Lighthouse audit in production due to stability issues
-        console.log('⚠️  PRODUCTION: Lighthouse audit disabled due to container stability issues')
-        console.log('🔧 Using enhanced static scores with realistic variations')
-        console.log('💡 This ensures reliable performance without Chrome connection issues')
+        // Run Lighthouse audit with improved stability
+        if (lighthouseEnabled) {
+          console.log('🚀 PRODUCTION: Starting Lighthouse audit for dynamic scores...')
+          
+          try {
+            // Use direct Lighthouse execution instead of child process
+            const lighthouseResults = await runLighthouseDirect(url)
+            
+            if (lighthouseResults) {
+              console.log('✅ Lighthouse audit completed successfully!')
+              console.log('📊 Raw Lighthouse results:')
+              console.log('   Performance score:', lighthouseResults.categories?.performance?.score)
+              console.log('   Accessibility score:', lighthouseResults.categories?.accessibility?.score)
+              console.log('   Best Practices score:', lighthouseResults.categories?.['best-practices']?.score)
+              console.log('   SEO score:', lighthouseResults.categories?.seo?.score)
+              
+              console.log('📊 Processing Lighthouse results...')
+              detailedResults = this.processLighthouseResults(lighthouseResults)
+              
+              if (detailedResults) {
+                console.log('🎯 Dynamic scores extracted from Lighthouse:')
+                console.log(`   Performance: ${detailedResults.performance.score}`)
+                console.log(`   Accessibility: ${detailedResults.accessibility.score}`)
+                console.log(`   Best Practices: ${detailedResults['best-practices'].score}`)
+                console.log(`   SEO: ${detailedResults.seo.score}`)
+              } else {
+                console.log('❌ Failed to process Lighthouse results')
+              }
+            } else {
+              console.log('❌ Lighthouse audit returned no results')
+            }
+          } catch (lighthouseError) {
+            console.log('❌ Lighthouse audit failed:', lighthouseError instanceof Error ? lighthouseError.message : 'Unknown error')
+            console.log('🔧 Falling back to enhanced static scores')
+          }
+        } else {
+          console.log('⚠️  Lighthouse audit disabled via ENABLE_LIGHTHOUSE=false')
+        }
 
         // Use Lighthouse scores when available, otherwise fall back to calculated scores
         const finalScores = detailedResults ? {
