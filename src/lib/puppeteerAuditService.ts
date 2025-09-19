@@ -1380,6 +1380,21 @@ export class PuppeteerAuditService {
       console.log('   Categories available:', Object.keys(categories || {}))
       console.log('   Audits available:', Object.keys(audits || {}).length, 'audits')
       
+      // Debug category scores
+      console.log('🔍 Category scores debug:')
+      if (categories) {
+        console.log('   Performance category:', categories.performance)
+        console.log('   Performance score:', categories.performance?.score)
+        console.log('   Accessibility category:', categories.accessibility)
+        console.log('   Accessibility score:', categories.accessibility?.score)
+        console.log('   Best Practices category:', categories['best-practices'])
+        console.log('   Best Practices score:', categories['best-practices']?.score)
+        console.log('   SEO category:', categories.seo)
+        console.log('   SEO score:', categories.seo?.score)
+      } else {
+        console.log('   ❌ No categories found!')
+      }
+      
       if (!categories) {
         console.log('❌ processLighthouseResults: No categories found in results')
         return undefined
@@ -1417,27 +1432,42 @@ export class PuppeteerAuditService {
       const seoPassed = this.extractPassedAudits(audits, 'seo')
       const seoFailed = this.extractFailedAudits(audits, 'seo')
 
+      // Debug score calculations
+      console.log('🔍 Score calculations debug:')
+      const perfScore = categories.performance?.score
+      const accScore = categories.accessibility?.score
+      const bpScore = categories['best-practices']?.score
+      const seoScore = categories.seo?.score
+      
+      console.log('   Raw scores:', { perfScore, accScore, bpScore, seoScore })
+      console.log('   Calculated scores:', {
+        performance: Math.round(perfScore * 100) || 0,
+        accessibility: Math.round(accScore * 100) || 0,
+        bestPractices: Math.round(bpScore * 100) || 0,
+        seo: Math.round(seoScore * 100) || 0
+      })
+
       const result = {
         performance: {
-          score: Math.round(categories.performance?.score * 100) || 0,
+          score: Math.round(perfScore * 100) || 0,
           metrics: performanceMetrics,
           issues: performanceIssues,
           opportunities: performanceOpportunities
         },
         accessibility: {
-          score: Math.round(categories.accessibility?.score * 100) || 0,
+          score: Math.round(accScore * 100) || 0,
           issues: accessibilityIssues,
           passedAudits: accessibilityPassed,
           failedAudits: accessibilityFailed
         },
         'best-practices': {
-          score: Math.round(categories['best-practices']?.score * 100) || 0,
+          score: Math.round(bpScore * 100) || 0,
           issues: bestPracticesIssues,
           passedAudits: bestPracticesPassed,
           failedAudits: bestPracticesFailed
         },
         seo: {
-          score: Math.round(categories.seo?.score * 100) || 0,
+          score: Math.round(seoScore * 100) || 0,
           issues: seoIssues,
           passedAudits: seoPassed,
           failedAudits: seoFailed
