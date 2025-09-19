@@ -296,7 +296,7 @@ async function runLighthouse() {
     const lighthouseFunc = lighthouse.default || lighthouse
     
     // Add timeout and retry logic for stability
-    const runLighthouseWithRetry = async (url: string, options: any, maxRetries = 2) => {
+    const runLighthouseWithRetry = async (url, options, maxRetries = 2) => {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log('Lighthouse attempt ' + attempt + '/' + maxRetries + '...')
