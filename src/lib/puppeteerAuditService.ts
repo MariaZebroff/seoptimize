@@ -232,6 +232,19 @@ function processPageSpeedResults(pageSpeedData: any): any {
     }
     
     const categories = pageSpeedData.lighthouseResult.categories
+    const audits = pageSpeedData.lighthouseResult.audits || {}
+    
+    // Extract performance metrics
+    const performanceMetrics = {
+      fcp: audits['first-contentful-paint']?.numericValue || 0,
+      lcp: audits['largest-contentful-paint']?.numericValue || 0,
+      cls: audits['cumulative-layout-shift']?.numericValue || 0,
+      fid: audits['max-potential-fid']?.numericValue || 0,
+      loadTime: audits['load-fast-3g']?.numericValue || 0,
+      domContentLoaded: audits['dom-content-loaded']?.numericValue || 0
+    }
+    
+    console.log('📊 Extracted performance metrics:', performanceMetrics)
     
     const result = {
       performance: {
@@ -249,7 +262,8 @@ function processPageSpeedResults(pageSpeedData: any): any {
       seo: {
         score: categories.seo?.score ? Math.round(categories.seo.score * 100) : 0,
         audits: categories.seo?.auditRefs || []
-      }
+      },
+      performanceMetrics: performanceMetrics
     }
     
     console.log('✅ PageSpeed results processed successfully')
@@ -1142,6 +1156,8 @@ export class PuppeteerAuditService {
           ...performanceMetrics,
           // Override with Lighthouse scores when available
           ...finalScores,
+          // Add PageSpeed performance metrics if available
+          ...(detailedResults?.performanceMetrics || {}),
           // Add detailed audit data if available
           accessibilityIssues: detailedResults?.accessibility.issues || null,
           accessibilityRecommendations: detailedResults?.accessibility.issues?.map(issue => issue.recommendation) || null,
