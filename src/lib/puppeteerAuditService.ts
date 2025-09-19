@@ -87,6 +87,7 @@ async function runLighthouse() {
     if (!chromePath) {
       const possibleChromePaths = [
         process.env.CHROME_PATH,
+        process.env.PUPPETEER_EXECUTABLE_PATH,
         '/usr/bin/chromium-browser',
         '/usr/bin/chromium',
         '/usr/bin/google-chrome-stable',
@@ -160,6 +161,7 @@ async function runLighthouse() {
     if (!chromePath) {
       console.log('❌ No Chrome executable found. Available paths checked:', [
         process.env.CHROME_PATH,
+        process.env.PUPPETEER_EXECUTABLE_PATH,
         '/usr/bin/google-chrome-stable',
         '/usr/bin/chromium-browser',
         '/usr/bin/chromium',
