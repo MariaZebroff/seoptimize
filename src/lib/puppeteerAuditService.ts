@@ -361,13 +361,27 @@ runLighthouse()
           
           if (startIndex !== -1 && endIndex !== -1) {
             const jsonResult = output.substring(startIndex + startMarker.length, endIndex).trim()
+            console.log('🔍 Parsing Lighthouse result...')
+            console.log('   JSON result length:', jsonResult.length)
+            console.log('   JSON result preview:', jsonResult.substring(0, 200) + '...')
+            
             if (jsonResult === 'null' || !jsonResult) {
+              console.log('❌ Lighthouse result is null or empty')
               resolveOnce(null)
             } else {
-              const parsed = JSON.parse(jsonResult)
-              resolveOnce(parsed)
+              try {
+                const parsed = JSON.parse(jsonResult)
+                console.log('✅ Successfully parsed Lighthouse result')
+                console.log('   Parsed result keys:', Object.keys(parsed || {}))
+                console.log('   Categories in parsed result:', Object.keys(parsed?.categories || {}))
+                resolveOnce(parsed)
+              } catch (parseError) {
+                console.error('❌ Failed to parse Lighthouse JSON:', parseError)
+                resolveOnce(null)
+              }
             }
           } else {
+            console.log('⚠️ No Lighthouse result markers found, using fallback parsing')
             // Fallback to old parsing method
             const result = JSON.parse(output.trim())
             resolveOnce(result)
