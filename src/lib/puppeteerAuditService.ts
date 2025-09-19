@@ -60,10 +60,12 @@ async function runLighthouseAttempt(url: string): Promise<any> {
     const lighthouseScript = `
 const path = require('path')
 const fs = require('fs')
-const lighthouse = require(path.join('${process.cwd()}', 'node_modules', 'lighthouse')).default || require(path.join('${process.cwd()}', 'node_modules', 'lighthouse'))
-const chromeLauncher = require(path.join('${process.cwd()}', 'node_modules', 'chrome-launcher'))
 
 async function runLighthouse() {
+  // Dynamic import for ES modules
+  const chromeLauncher = await import(path.join('${process.cwd()}', 'node_modules', 'chrome-launcher'))
+  const lighthouse = await import(path.join('${process.cwd()}', 'node_modules', 'lighthouse'))
+  
   let chrome = null
   try {
     console.log('🚀 Launching Chrome for Lighthouse...')
@@ -180,7 +182,7 @@ async function runLighthouse() {
     }
     
     // Enhanced Chrome launcher options for better reliability
-    chrome = await chromeLauncher.launch({
+    chrome = await chromeLauncher.default.launch({
       chromePath: chromePath,
       chromeFlags: [
         '--headless',
@@ -232,7 +234,7 @@ async function runLighthouse() {
     }
     
     console.log('🔍 Running Lighthouse audit...')
-    const result = await lighthouse('${url}', options)
+    const result = await lighthouse.default('${url}', options)
     if (result && result.lhr) {
       console.log('✅ Lighthouse audit completed successfully!')
       console.log('📊 Scores:')
