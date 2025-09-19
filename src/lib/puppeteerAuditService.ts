@@ -62,9 +62,9 @@ const path = require('path')
 const fs = require('fs')
 
 async function runLighthouse() {
-  // Dynamic import for ES modules
-  const chromeLauncher = await import(path.join('${process.cwd()}', 'node_modules', 'chrome-launcher'))
-  const lighthouse = await import(path.join('${process.cwd()}', 'node_modules', 'lighthouse'))
+  // Dynamic import for ES modules with specific file paths
+  const chromeLauncher = await import(path.join('${process.cwd()}', 'node_modules', 'chrome-launcher', 'dist', 'index.js'))
+  const lighthouse = await import(path.join('${process.cwd()}', 'node_modules', 'lighthouse', 'core', 'index.js'))
   
   let chrome = null
   try {
