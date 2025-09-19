@@ -1161,9 +1161,43 @@ export class PuppeteerAuditService {
             }
           }
           
-          // If both failed, use enhanced static scores
+          // If both failed, try Puppeteer-based Lighthouse simulation
           if (!detailedResults) {
-            console.log('🔧 Both PageSpeed and direct Lighthouse failed, using enhanced static scores')
+            console.log('🔧 Both PageSpeed and direct Lighthouse failed, trying Puppeteer-based Lighthouse simulation...')
+            try {
+              const puppeteerLighthouseResults = await this.runPuppeteerLighthouseSimulation(page, url)
+              
+              if (puppeteerLighthouseResults) {
+                console.log('✅ Puppeteer Lighthouse simulation completed successfully!')
+                console.log('📊 Raw Puppeteer Lighthouse results:')
+                console.log('   Performance score:', puppeteerLighthouseResults.performance)
+                console.log('   Accessibility score:', puppeteerLighthouseResults.accessibility)
+                console.log('   Best Practices score:', puppeteerLighthouseResults.bestPractices)
+                console.log('   SEO score:', puppeteerLighthouseResults.seo)
+                
+                detailedResults = {
+                  performance: { score: puppeteerLighthouseResults.performance },
+                  accessibility: { score: puppeteerLighthouseResults.accessibility },
+                  'best-practices': { score: puppeteerLighthouseResults.bestPractices },
+                  seo: { score: puppeteerLighthouseResults.seo }
+                }
+                
+                console.log('🎯 Dynamic scores extracted from Puppeteer Lighthouse simulation:')
+                console.log(`   Performance: ${detailedResults.performance.score}`)
+                console.log(`   Accessibility: ${detailedResults.accessibility.score}`)
+                console.log(`   Best Practices: ${detailedResults['best-practices'].score}`)
+                console.log(`   SEO: ${detailedResults.seo.score}`)
+              } else {
+                console.log('❌ Puppeteer Lighthouse simulation returned no results')
+              }
+            } catch (puppeteerError) {
+              console.log('❌ Puppeteer Lighthouse simulation failed:', puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error')
+            }
+          }
+          
+          // If all methods failed, use enhanced static scores
+          if (!detailedResults) {
+            console.log('🔧 All Lighthouse methods failed, using enhanced static scores')
           }
         } else {
           console.log('⚠️  Lighthouse audit disabled via ENABLE_LIGHTHOUSE=false')
@@ -1533,6 +1567,134 @@ export class PuppeteerAuditService {
       },
       enhancedSEOAnalysis
     }
+  }
+
+  private async runPuppeteerLighthouseSimulation(page: Page, url: string): Promise<any> {
+    console.log('🔍 Running Puppeteer-based Lighthouse simulation...')
+    
+    try {
+      // Get comprehensive performance metrics
+      const metrics = await page.evaluate(() => {
+        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
+        const paint = performance.getEntriesByType('paint')
+        const resource = performance.getEntriesByType('resource')
+        
+        // Core Web Vitals
+        const fcp = paint.find(entry => entry.name === 'first-contentful-paint')?.startTime || 0
+        const lcp = paint.find(entry => entry.name === 'largest-contentful-paint')?.startTime || 0
+        const loadTime = navigation.loadEventEnd - navigation.loadEventStart
+        const domContentLoaded = navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart
+        
+        // Resource analysis
+        const totalResources = resource.length
+        const slowResources = resource.filter(r => r.duration > 1000).length
+        const resourceEfficiency = totalResources > 0 ? (totalResources - slowResources) / totalResources : 1
+        
+        // DOM analysis
+        const domNodes = document.querySelectorAll('*').length
+        const domComplexity = Math.min(domNodes / 1000, 1) // Normalize to 0-1
+        
+        // Accessibility checks
+        const images = document.querySelectorAll('img')
+        const imagesWithoutAlt = Array.from(images).filter(img => !img.alt).length
+        const accessibilityScore = images.length > 0 ? (images.length - imagesWithoutAlt) / images.length : 1
+        
+        // SEO checks
+        const title = document.title
+        const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content')
+        const h1Tags = document.querySelectorAll('h1').length
+        const seoScore = (title ? 0.3 : 0) + (metaDescription ? 0.3 : 0) + (h1Tags > 0 ? 0.4 : 0)
+        
+        return {
+          fcp,
+          lcp,
+          loadTime,
+          domContentLoaded,
+          resourceEfficiency,
+          domComplexity,
+          accessibilityScore,
+          seoScore,
+          totalResources,
+          slowResources,
+          domNodes,
+          imagesWithoutAlt
+        }
+      })
+      
+      // Calculate scores based on real metrics
+      const performanceScore = this.calculateRealPerformanceScore(metrics)
+      const accessibilityScore = Math.round(metrics.accessibilityScore * 100)
+      const seoScore = Math.round(metrics.seoScore * 100)
+      const bestPracticesScore = this.calculateBestPracticesScore(metrics)
+      
+      console.log('📊 Puppeteer Lighthouse simulation results:')
+      console.log(`   Performance: ${performanceScore} (FCP: ${metrics.fcp}ms, LCP: ${metrics.lcp}ms)`)
+      console.log(`   Accessibility: ${accessibilityScore} (${metrics.imagesWithoutAlt} images without alt)`)
+      console.log(`   SEO: ${seoScore} (title: ${!!metrics.title}, meta: ${!!metrics.metaDescription}, h1: ${metrics.h1Tags})`)
+      console.log(`   Best Practices: ${bestPracticesScore} (resources: ${metrics.totalResources}, slow: ${metrics.slowResources})`)
+      
+      return {
+        performance: performanceScore,
+        accessibility: accessibilityScore,
+        seo: seoScore,
+        bestPractices: bestPracticesScore
+      }
+      
+    } catch (error) {
+      console.error('❌ Puppeteer Lighthouse simulation failed:', error instanceof Error ? error.message : 'Unknown error')
+      return null
+    }
+  }
+
+  private calculateRealPerformanceScore(metrics: any): number {
+    let score = 100
+    
+    // FCP scoring (0-2.5s is good, 2.5-4s is needs improvement, >4s is poor)
+    if (metrics.fcp > 4000) score -= 40
+    else if (metrics.fcp > 2500) score -= 20
+    else if (metrics.fcp > 1800) score -= 10
+    
+    // LCP scoring (0-2.5s is good, 2.5-4s is needs improvement, >4s is poor)
+    if (metrics.lcp > 4000) score -= 30
+    else if (metrics.lcp > 2500) score -= 15
+    else if (metrics.lcp > 1800) score -= 5
+    
+    // Load time scoring
+    if (metrics.loadTime > 3000) score -= 20
+    else if (metrics.loadTime > 2000) score -= 10
+    
+    // Resource efficiency
+    score -= (1 - metrics.resourceEfficiency) * 20
+    
+    // DOM complexity
+    score -= metrics.domComplexity * 10
+    
+    return Math.max(0, Math.min(100, Math.round(score)))
+  }
+
+  private calculateBestPracticesScore(metrics: any): number {
+    let score = 100
+    
+    // Slow resources penalty
+    if (metrics.slowResources > 0) {
+      score -= (metrics.slowResources / metrics.totalResources) * 30
+    }
+    
+    // DOM complexity penalty
+    if (metrics.domNodes > 2000) {
+      score -= 20
+    } else if (metrics.domNodes > 1000) {
+      score -= 10
+    }
+    
+    // Resource count penalty
+    if (metrics.totalResources > 100) {
+      score -= 15
+    } else if (metrics.totalResources > 50) {
+      score -= 5
+    }
+    
+    return Math.max(0, Math.min(100, Math.round(score)))
   }
 
   private async calculatePerformanceMetrics(page: Page) {
