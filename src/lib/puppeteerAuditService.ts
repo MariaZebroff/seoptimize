@@ -136,28 +136,88 @@ async function getPageSpeedInsights(url: string): Promise<any> {
       throw new Error('GOOGLE_PAGESPEED_API_KEY environment variable not set')
     }
     
-    const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=${apiKey}&category=performance&category=accessibility&category=best-practices&category=seo&strategy=mobile`
+    console.log('🔑 API Key found:', apiKey.substring(0, 10) + '...')
+    console.log('🌐 Target URL:', url)
+    
+    // Build API URL with proper parameters
+    const params = new URLSearchParams({
+      url: url,
+      key: apiKey,
+      strategy: 'mobile'
+    })
+    
+    // Add multiple categories
+    const categories = ['performance', 'accessibility', 'best-practices', 'seo']
+    categories.forEach(category => {
+      params.append('category', category)
+    })
+    
+    const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${params.toString()}`
+    console.log('📡 API URL:', apiUrl.replace(apiKey, 'API_KEY_HIDDEN'))
     
     console.log('📡 Making request to PageSpeed Insights API...')
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-      },
-      timeout: 30000
+        'User-Agent': 'SEO-Optimize/1.0'
+      }
     })
     
+    console.log('📊 Response status:', response.status)
+    console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()))
+    
     if (!response.ok) {
-      throw new Error(`PageSpeed API returned ${response.status}: ${response.statusText}`)
+      const errorText = await response.text()
+      console.error('❌ API Error Response:', errorText)
+      
+      // Try desktop strategy as fallback
+      if (response.status === 500) {
+        console.log('🔄 Trying desktop strategy as fallback...')
+        const desktopParams = new URLSearchParams({
+          url: url,
+          key: apiKey,
+          strategy: 'desktop'
+        })
+        categories.forEach(category => {
+          desktopParams.append('category', category)
+        })
+        
+        const desktopApiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${desktopParams.toString()}`
+        console.log('📡 Desktop API URL:', desktopApiUrl.replace(apiKey, 'API_KEY_HIDDEN'))
+        
+        const desktopResponse = await fetch(desktopApiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'SEO-Optimize/1.0'
+          }
+        })
+        
+        if (desktopResponse.ok) {
+          const desktopData = await desktopResponse.json()
+          console.log('✅ Desktop PageSpeed Insights API response received')
+          return desktopData
+        } else {
+          const desktopErrorText = await desktopResponse.text()
+          console.error('❌ Desktop API Error Response:', desktopErrorText)
+        }
+      }
+      
+      throw new Error(`PageSpeed API returned ${response.status}: ${response.statusText} - ${errorText}`)
     }
     
     const data = await response.json()
     console.log('✅ PageSpeed Insights API response received')
+    console.log('📊 Response keys:', Object.keys(data))
     
     return data
     
   } catch (error) {
     console.error('❌ PageSpeed Insights API failed:', error instanceof Error ? error.message : 'Unknown error')
+    if (error instanceof Error && error.stack) {
+      console.error('🔍 Stack trace:', error.stack)
+    }
     return null
   }
 }
