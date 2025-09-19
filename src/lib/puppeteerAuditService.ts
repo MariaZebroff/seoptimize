@@ -6,88 +6,7 @@ import { EnhancedSEOAnalysis, SEOAnalysisResult } from './enhancedSEOAnalysis'
 let lighthouse: any = null
 let chromeLauncher: any = null
 
-// Generate realistic Lighthouse scores when Chrome is not available
-function generateRealisticLighthouseScores(url: string): any {
-  console.log('🎯 PRODUCTION: Generating realistic Lighthouse scores for:', url)
-  
-  // Special override for Cisco partner page
-  if (url.includes('cisco.com/site/us/en/partners/connect-with-a-partner')) {
-    console.log('🚨 CISCO OVERRIDE: Using exact expected scores (39, 99, 54, 85)')
-    return {
-      categories: {
-        performance: { score: 0.39 },
-        accessibility: { score: 0.99 },
-        'best-practices': { score: 0.54 },
-        seo: { score: 0.85 }
-      },
-      audits: {
-        'first-contentful-paint': { numericValue: 3097 },
-        'largest-contentful-paint': { numericValue: 3438 },
-        'cumulative-layout-shift': { numericValue: 0.502 },
-        'speed-index': { numericValue: 2800 },
-        'total-blocking-time': { numericValue: 385 },
-        'first-input-delay': { numericValue: 385 }
-      }
-    }
-  }
-  
-  // Generate realistic scores based on URL characteristics
-  const isHttps = url.startsWith('https://')
-  const isCorporate = url.includes('.com') && (url.includes('corp') || url.includes('company') || url.includes('business'))
-  const isSimple = url.split('/').length <= 4
-  
-  // Base scores with some variation
-  let performance = Math.floor(Math.random() * 40) + 30 // 30-70
-  let accessibility = Math.floor(Math.random() * 30) + 70 // 70-100
-  let bestPractices = Math.floor(Math.random() * 40) + 50 // 50-90
-  let seo = Math.floor(Math.random() * 30) + 60 // 60-90
-  
-  // Adjust based on URL characteristics
-  if (isHttps) {
-    bestPractices += 10
-    seo += 5
-  }
-  
-  if (isCorporate) {
-    performance -= 15 // Corporate sites tend to be slower
-    accessibility += 5 // Usually better accessibility
-  }
-  
-  if (isSimple) {
-    performance += 10 // Simple sites are faster
-    seo -= 5 // Might have less SEO optimization
-  }
-  
-  // Ensure scores are within valid range
-  performance = Math.max(0, Math.min(100, performance))
-  accessibility = Math.max(0, Math.min(100, accessibility))
-  bestPractices = Math.max(0, Math.min(100, bestPractices))
-  seo = Math.max(0, Math.min(100, seo))
-  
-  console.log('📊 Generated realistic scores:', {
-    performance,
-    accessibility,
-    bestPractices,
-    seo
-  })
-  
-  return {
-    categories: {
-      performance: { score: performance / 100 },
-      accessibility: { score: accessibility / 100 },
-      'best-practices': { score: bestPractices / 100 },
-      seo: { score: seo / 100 }
-    },
-    audits: {
-      'first-contentful-paint': { numericValue: Math.floor(Math.random() * 2000) + 1000 },
-      'largest-contentful-paint': { numericValue: Math.floor(Math.random() * 3000) + 1500 },
-      'cumulative-layout-shift': { numericValue: Math.random() * 0.3 },
-      'speed-index': { numericValue: Math.floor(Math.random() * 2000) + 1000 },
-      'total-blocking-time': { numericValue: Math.floor(Math.random() * 500) + 100 },
-      'first-input-delay': { numericValue: Math.floor(Math.random() * 200) + 50 }
-    }
-  }
-}
+// REAL Lighthouse only - no fallbacks!
 
 // Enhanced function to run Lighthouse with better error handling and retry logic
 async function runLighthouseInChildProcess(url: string): Promise<any> {
@@ -253,11 +172,9 @@ async function runLighthouse() {
         '/usr/bin/google-chrome-beta',
         '/usr/bin/google-chrome-unstable'
       ])
-      console.log('💡 Chrome not found. Using realistic Lighthouse scores instead.')
-      console.log('🚀 Generating realistic Lighthouse scores for:', url)
-      
-      // Generate realistic Lighthouse scores based on URL analysis
-      return generateRealisticLighthouseScores(url)
+      console.log('💡 Chrome not found. Please install Chrome or set CHROME_PATH environment variable.')
+      console.log('💡 For Railway, Chrome should be installed during build process.')
+      throw new Error('Chrome executable not found - please install Chrome or set CHROME_PATH environment variable')
     }
     
     // Enhanced Chrome launcher options for better reliability
