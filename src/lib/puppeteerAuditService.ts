@@ -156,13 +156,21 @@ async function getPageSpeedInsights(url: string): Promise<any> {
     console.log('📡 API URL:', apiUrl.replace(apiKey, 'API_KEY_HIDDEN'))
     
     console.log('📡 Making request to PageSpeed Insights API...')
+    
+    // Add timeout to prevent hanging
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+    
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'SEO-Optimize/1.0'
-      }
+      },
+      signal: controller.signal
     })
+    
+    clearTimeout(timeoutId)
     
     console.log('📊 Response status:', response.status)
     console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()))
@@ -214,7 +222,11 @@ async function getPageSpeedInsights(url: string): Promise<any> {
     return data
     
   } catch (error) {
-    console.error('❌ PageSpeed Insights API failed:', error instanceof Error ? error.message : 'Unknown error')
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('❌ PageSpeed Insights API timed out after 30 seconds')
+    } else {
+      console.error('❌ PageSpeed Insights API failed:', error instanceof Error ? error.message : 'Unknown error')
+    }
     if (error instanceof Error && error.stack) {
       console.error('🔍 Stack trace:', error.stack)
     }
@@ -1508,7 +1520,14 @@ export class PuppeteerAuditService {
         clsScore: 0, // CLS requires more complex measurement
         fidScore: 0, // FID requires more complex measurement
         loadTime: metrics.loadTime,
-        performanceMetrics: metrics
+        performanceMetrics: {
+          fcp: metrics.fcp,
+          lcp: metrics.lcp,
+          cls: 0, // CLS requires more complex measurement
+          fid: 0, // FID requires more complex measurement
+          loadTime: metrics.loadTime,
+          domContentLoaded: metrics.domContentLoaded
+        }
       }
     } catch (error) {
       console.error('Error calculating performance metrics:', error)
@@ -1517,7 +1536,20 @@ export class PuppeteerAuditService {
         performanceScore: 0,
         accessibilityScore: 0,
         seoScore: 0,
-        bestPracticesScore: 0
+        bestPracticesScore: 0,
+        fcpScore: 0,
+        lcpScore: 0,
+        clsScore: 0,
+        fidScore: 0,
+        loadTime: 0,
+        performanceMetrics: {
+          fcp: 0,
+          lcp: 0,
+          cls: 0,
+          fid: 0,
+          loadTime: 0,
+          domContentLoaded: 0
+        }
       }
     }
   }
