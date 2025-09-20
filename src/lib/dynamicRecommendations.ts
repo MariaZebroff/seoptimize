@@ -59,7 +59,10 @@ export class DynamicRecommendationEngine {
     seo: SEOInsights
   } {
     return {
-      performance: this.generatePerformanceInsights(detailedResults.performance),
+      performance: this.generatePerformanceInsights({
+        ...detailedResults.performance,
+        metrics: detailedResults.performanceMetrics
+      }),
       accessibility: this.generateAccessibilityInsights(detailedResults.accessibility),
       'best-practices': this.generateBestPracticesInsights(detailedResults['best-practices']),
       seo: this.generateSEOInsights(detailedResults.seo)
@@ -87,25 +90,28 @@ export class DynamicRecommendationEngine {
   }
 
   private static generatePerformanceInsights(performance: unknown): PerformanceInsights {
-    const { score, metrics, issues, opportunities } = performance
+    const { score, metrics, issues, opportunities } = performance || {}
     
-    // Analyze metrics trends
+    // Handle case where metrics might be undefined or in a different structure
+    const safeMetrics = metrics || {}
+    
+    // Analyze metrics trends with safe access
     const trends = {
-      fcp: this.analyzeMetric(metrics.fcp, { good: 1800, poor: 3000 }),
-      lcp: this.analyzeMetric(metrics.lcp, { good: 2500, poor: 4000 }),
-      cls: this.analyzeMetric(metrics.cls, { good: 0.1, poor: 0.25 }),
-      fid: this.analyzeMetric(metrics.fid, { good: 100, poor: 300 })
+      fcp: this.analyzeMetric(safeMetrics.fcp, { good: 1800, poor: 3000 }),
+      lcp: this.analyzeMetric(safeMetrics.lcp, { good: 2500, poor: 4000 }),
+      cls: this.analyzeMetric(safeMetrics.cls, { good: 0.1, poor: 0.25 }),
+      fid: this.analyzeMetric(safeMetrics.fid, { good: 100, poor: 300 })
     }
 
-    // Get critical issues (high impact)
-    const criticalIssues = issues.filter((issue: AuditIssue) => issue.impact === 'high')
+    // Get critical issues (high impact) with safe access
+    const criticalIssues = (issues || []).filter((issue: AuditIssue) => issue.impact === 'high')
 
     // Generate dynamic recommendations based on actual issues
-    const dynamicOpportunities = this.generatePerformanceRecommendations(metrics, issues, opportunities)
+    const dynamicOpportunities = this.generatePerformanceRecommendations(safeMetrics, issues || [], opportunities || [])
 
     return {
-      score,
-      metrics,
+      score: score || 0,
+      metrics: safeMetrics,
       criticalIssues,
       opportunities: dynamicOpportunities,
       trends
