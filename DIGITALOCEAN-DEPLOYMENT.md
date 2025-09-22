@@ -227,3 +227,4 @@ Your SEO Optimize app is now running on DigitalOcean App Platform with full Chro
 - [Next.js Deployment Guide](https://nextjs.org/docs/deployment)
 - [Puppeteer Deployment Best Practices](https://pptr.dev/guides/deployment)
 
+

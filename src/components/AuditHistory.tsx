@@ -384,7 +384,23 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
               </div>
             )}
           </div>
-          <EnhancedSEOResults analysis={audits[0].enhancedSEOAnalysis} />
+          <EnhancedSEOResults 
+            analysis={audits[0].enhancedSEOAnalysis} 
+            auditData={{
+              h1_tags: audits[0].h1_tags,
+              h2_tags: audits[0].h2_tags,
+              h3_tags: audits[0].h3_tags,
+              h4_tags: audits[0].h4_tags,
+              h5_tags: audits[0].h5_tags,
+              h6_tags: audits[0].h6_tags,
+              h1_word_count: audits[0].h1_word_count,
+              h2_word_count: audits[0].h2_word_count,
+              h3_word_count: audits[0].h3_word_count,
+              h4_word_count: audits[0].h4_word_count,
+              h5_word_count: audits[0].h5_word_count,
+              h6_word_count: audits[0].h6_word_count
+            }}
+          />
         </div>
       )}
 

@@ -978,7 +978,23 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
                       <p className="text-gray-600 mt-1">Comprehensive SEO analysis with detailed suggestions and character counting</p>
                     </div>
                     <div className="p-6">
-                      <EnhancedSEOResults analysis={result.enhancedSEOAnalysis} />
+                      <EnhancedSEOResults 
+                        analysis={result.enhancedSEOAnalysis} 
+                        auditData={{
+                          h1_tags: result.h1Tags,
+                          h2_tags: result.h2Tags,
+                          h3_tags: result.h3Tags,
+                          h4_tags: result.h4Tags,
+                          h5_tags: result.h5Tags,
+                          h6_tags: result.h6Tags,
+                          h1_word_count: result.h1WordCount,
+                          h2_word_count: result.h2WordCount,
+                          h3_word_count: result.h3WordCount,
+                          h4_word_count: result.h4WordCount,
+                          h5_word_count: result.h5WordCount,
+                          h6_word_count: result.h6WordCount
+                        }}
+                      />
                     </div>
                   </div>
                 ) : (
