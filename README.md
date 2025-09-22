@@ -1,6 +1,8 @@
 # SEO Optimize
 
-A comprehensive SEO optimization tool built with Next.js, featuring website auditing capabilities powered by Google Lighthouse CI.
+A comprehensive SEO optimization tool built with Next.js, featuring website auditing capabilities powered by Google PageSpeed Insights API.
+
+<!-- Updated for PSI API integration -->
 
 ## Features
 
