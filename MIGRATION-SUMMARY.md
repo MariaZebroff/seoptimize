@@ -169,3 +169,4 @@ Your app is now:
 **🎉 Your SEO Optimize app is now deployment-ready on any platform!**
 
 **Next step**: Get your PSI API key and deploy to Vercel for free! 🚀
+
