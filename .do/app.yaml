@@ -9,7 +9,7 @@ services:
   build_command: npm run build
   environment_slug: node-js
   instance_count: 1
-  instance_size_slug: basic-xxs  # $5/month - upgrade to basic-xs ($12/month) if needed
+  instance_size_slug: basic-xxs  # $5/month - now works on smaller instances!
   http_port: 3000
   routes:
   - path: /
@@ -20,8 +20,8 @@ services:
     value: your-supabase-project-url  # Replace with your actual Supabase URL
   - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
     value: your-supabase-anon-key  # Replace with your actual Supabase anon key
-  - key: ENABLE_LIGHTHOUSE
-    value: "true"
+  - key: PAGESPEED_INSIGHTS_API_KEY
+    value: your-psi-api-key  # Replace with your actual PSI API key
   health_check:
     http_path: /
     initial_delay_seconds: 30

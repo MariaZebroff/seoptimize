@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PuppeteerAuditService } from '@/lib/puppeteerAuditService'
+import { PSIAuditService } from '@/lib/psiAuditService'
 import { HttpAuditService } from '@/lib/httpAuditService'
 import { createSupabaseServerClient, saveAuditResultServer } from '@/lib/supabaseServer'
 import { createServerClient } from '@supabase/ssr'
@@ -62,17 +62,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 })
     }
 
-    console.log('Starting audit service with enhanced error handling')
+    console.log('Starting PSI audit service with enhanced error handling')
     
-    // Try Puppeteer audit first with better error handling
+    // Try PSI audit first with better error handling
     let auditResult
     try {
-      console.log('Attempting Puppeteer audit...')
-      const puppeteerService = PuppeteerAuditService.getInstance()
-      auditResult = await puppeteerService.auditWebsite(url)
+      console.log('Attempting PSI audit...')
+      const psiService = PSIAuditService.getInstance()
+      auditResult = await psiService.auditWebsite(url)
       
       if (auditResult.status === 'success') {
-        console.log('Puppeteer audit successful')
+        console.log('PSI audit successful')
         
         // Save audit result to database with error handling
         try {
@@ -88,10 +88,10 @@ export async function POST(request: NextRequest) {
         
         return NextResponse.json(auditResult)
       } else {
-        console.log('Puppeteer audit returned error status:', auditResult.error)
+        console.log('PSI audit returned error status:', auditResult.error)
       }
-    } catch (puppeteerError) {
-      console.log('Puppeteer audit failed with exception:', puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error')
+    } catch (psiError) {
+      console.log('PSI audit failed with exception:', psiError instanceof Error ? psiError.message : 'Unknown error')
     }
 
     // Fallback to HTTP audit with enhanced error handling
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { 
             error: auditResult.error || 'Failed to audit website with both methods',
-            details: 'Both Puppeteer and HTTP audit methods failed. The website may be blocking automated requests or experiencing issues.'
+            details: 'Both PSI and HTTP audit methods failed. The website may be blocking automated requests or experiencing issues.'
           },
           { status: 500 }
         )
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json(
         { 
-          error: 'Failed to audit website. Both Puppeteer and HTTP methods failed.',
+          error: 'Failed to audit website. Both PSI and HTTP methods failed.',
           details: 'The website may be blocking automated requests, experiencing server issues, or the URL may be invalid.',
           suggestion: 'Please verify the URL is correct and accessible, then try again.'
         },

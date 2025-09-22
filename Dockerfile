@@ -1,5 +1,5 @@
-# Use Node.js 18 with Chrome pre-installed
-FROM ghcr.io/puppeteer/puppeteer:21.5.2
+# Use Node.js 18 Alpine for smaller image
+FROM node:18-alpine
 
 # Set working directory
 WORKDIR /app
