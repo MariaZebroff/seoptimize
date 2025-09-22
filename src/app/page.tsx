@@ -1,5 +1,6 @@
 "use client"
 
+// Clean build without AI page - v0.2.0
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { getCurrentUser } from "@/lib/supabaseAuth"
