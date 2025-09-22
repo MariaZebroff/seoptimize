@@ -6,6 +6,7 @@ A comprehensive SEO optimization tool built with Next.js, featuring website audi
 
 ## Features
 
+### Core SEO Features
 - **User Authentication**: Secure signup/signin with Supabase
 - **Site Management**: Add and manage multiple websites
 - **Site Auditing**: Comprehensive website analysis including:
@@ -16,6 +17,16 @@ A comprehensive SEO optimization tool built with Next.js, featuring website audi
   - Performance, SEO, Accessibility, and Best Practices scores
 - **Audit History**: Complete audit history with timestamps and detailed results
 - **Real-time Results**: Interactive dashboard with detailed audit reports
+
+### 🤖 AI-Powered Features
+- **AI Insights Dashboard**: Comprehensive SEO analysis powered by advanced AI
+- **AI Content Generation**: Generate optimized titles, meta descriptions, and content suggestions
+- **AI Keyword Research**: Discover high-value keywords with AI-powered analysis
+- **AI Competitor Analysis**: Get insights into competitor strategies and opportunities
+- **Predictive Analytics**: AI predictions for traffic growth and ranking improvements
+- **Personalized Recommendations**: AI that learns from your preferences and industry trends
+- **Content Quality Analysis**: AI-powered content readability and optimization assessment
+- **Dynamic Recommendations**: Intelligent suggestions based on audit results
 
 ## Audit History
 
@@ -34,6 +45,9 @@ The application automatically saves all audit results to the database, creating 
 - **Authentication**: Supabase Auth
 - **Database**: Supabase
 - **Auditing**: Google Lighthouse CI, Puppeteer
+- **AI Integration**: OpenAI GPT-4 API
+- **Charts**: Recharts
+- **PDF Generation**: jsPDF, html2canvas
 
 ## Database Setup
 
@@ -44,6 +58,12 @@ This application uses Supabase for authentication and data storage. Make sure yo
    ```
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   OPENAI_API_KEY=your_openai_api_key
+   ```
+
+   **Quick Setup**: Run the setup script to configure AI features:
+   ```bash
+   ./setup-ai.sh
    ```
 3. **Database Schema**: Run the SQL commands in `database-schema.sql` in your Supabase SQL editor
 
@@ -91,6 +111,41 @@ The application includes a powerful site auditing feature that analyzes websites
 - **SEO Score**: SEO optimization rating
 - **Accessibility Score**: Web accessibility rating
 - **Best Practices Score**: Web best practices rating
+
+## AI Features
+
+The application includes powerful AI-powered features that provide intelligent SEO insights and recommendations:
+
+### AI Insights Dashboard
+- Comprehensive SEO analysis powered by GPT-4
+- Personalized recommendations based on your website's data
+- Predictive analytics for traffic and ranking improvements
+- Industry-specific insights and best practices
+
+### AI Content Generation
+- Generate optimized page titles (50-60 characters)
+- Create compelling meta descriptions (150-160 characters)
+- AI-powered content suggestions and improvements
+- Keyword-optimized content recommendations
+
+### AI Keyword Research
+- Discover high-value keywords with AI analysis
+- Competition and search volume assessment
+- Related keyword suggestions
+- Industry-specific keyword recommendations
+
+### AI Competitor Analysis
+- Analyze competitor strategies and identify opportunities
+- Gap analysis and competitive positioning
+- Market share insights and recommendations
+- Strategic recommendations for outperforming competitors
+
+### Premium AI Features
+- Unlimited AI content generation
+- Advanced competitor analysis
+- Predictive analytics and forecasting
+- Priority processing and support
+- Advanced reporting and insights
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

@@ -9,6 +9,8 @@ import type { DetailedAuditResults } from '@/lib/puppeteerAuditService'
 import type { SEOAnalysisResult } from '@/lib/enhancedSEOAnalysis'
 import type { ContentQualityMetrics } from '@/lib/contentQualityAnalyzer'
 import ContentQualityAnalysis from './ContentQualityAnalysis'
+import AIContentGenerator from './AIContentGenerator'
+import AIKeywordResearch from './AIKeywordResearch'
 
 interface AuditResult {
   title: string
@@ -796,7 +798,7 @@ const BrokenLinksCard = ({ brokenLinkDetails, brokenLinkSummary }: {
 }
 
 export default function AuditResults({ result, loading, error }: AuditResultsProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices' | 'content-quality'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices' | 'content-quality' | 'ai-content' | 'ai-keywords'>('overview')
   
   // Debug logging for active tab
   console.log('🔍 AuditResults - Current active tab:', activeTab)
@@ -853,7 +855,9 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
     { id: 'performance', name: 'Performance', icon: '⚡' },
     { id: 'accessibility', name: 'Accessibility', icon: '♿' },
     { id: 'best-practices', name: 'Best Practices', icon: '✅' },
-    { id: 'content-quality', name: 'Content Quality', icon: '📝' }
+    { id: 'content-quality', name: 'Content Quality', icon: '📝' },
+    { id: 'ai-content', name: 'AI Content', icon: '✨' },
+    { id: 'ai-keywords', name: 'AI Keywords', icon: '🔍' }
   ]
 
   return (
@@ -886,7 +890,7 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
                 key={tab.id}
                 onClick={() => {
                   console.log('🔍 Tab clicked:', tab.id)
-                  setActiveTab(tab.id as 'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices')
+                  setActiveTab(tab.id as 'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices' | 'content-quality' | 'ai-content' | 'ai-keywords')
                 }}
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
@@ -1277,6 +1281,28 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
                   <p className="text-yellow-700 text-sm mt-2">This feature analyzes content readability, structure, and quality metrics.</p>
                 </div>
               )}
+            </div>
+          )}
+
+
+          {activeTab === 'ai-content' && (
+            <div className="space-y-6">
+              <AIContentGenerator
+                currentTitle={result.title}
+                currentMetaDescription={result.metaDescription}
+                content={`${result.title} ${result.metaDescription} ${result.h1Tags.join(' ')}`}
+                targetKeywords={[]}
+              />
+            </div>
+          )}
+
+          {activeTab === 'ai-keywords' && (
+            <div className="space-y-6">
+              <AIKeywordResearch
+                url={result.url}
+                currentKeywords={[]}
+                industry="general"
+              />
             </div>
           )}
         </div>

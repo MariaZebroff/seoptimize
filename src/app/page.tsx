@@ -55,6 +55,12 @@ export default function Home() {
                   >
                     Dashboard
                   </Link>
+                  <Link
+                    href="/ai"
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    AI Dashboard
+                  </Link>
                 </>
               ) : (
                 <>
@@ -84,9 +90,9 @@ export default function Home() {
               Welcome to SEO Optimize
             </h1>
             <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-              Optimize your website&apos;s SEO with our powerful tools and analytics.
+              Optimize your website&apos;s SEO with AI-powered insights and intelligent recommendations.
             </p>
-            <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
+            <div className="mt-5 max-w-2xl mx-auto sm:flex sm:justify-center md:mt-8">
               {user ? (
                 <div className="rounded-md shadow">
                   <Link
@@ -112,6 +118,68 @@ export default function Home() {
                   </Link>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Features Section */}
+          <div className="mt-20">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                AI-Powered SEO Features
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Leverage advanced AI to get intelligent insights and recommendations for your website
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="text-4xl mb-4">🤖</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">AI Insights</h3>
+                <p className="text-gray-600">
+                  Get comprehensive SEO analysis powered by advanced AI that learns from your data and provides personalized recommendations.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="text-4xl mb-4">✨</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">Content Generation</h3>
+                <p className="text-gray-600">
+                  Generate optimized titles, meta descriptions, and content suggestions that are tailored to your target audience and keywords.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="text-4xl mb-4">🔍</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">Keyword Research</h3>
+                <p className="text-gray-600">
+                  Discover high-value keywords with AI-powered analysis of search volume, competition, and relevance to your business.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="text-4xl mb-4">🏆</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">Competitor Analysis</h3>
+                <p className="text-gray-600">
+                  Get AI-powered insights into your competitors' strategies and identify opportunities to outperform them.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="text-4xl mb-4">📊</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">Predictive Analytics</h3>
+                <p className="text-gray-600">
+                  AI predictions for traffic growth, ranking improvements, and conversion rate optimization based on your optimization efforts.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="text-4xl mb-4">🎯</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">Personalized Strategy</h3>
+                <p className="text-gray-600">
+                  AI that learns from your preferences and industry trends to provide increasingly relevant and effective recommendations.
+                </p>
+              </div>
             </div>
           </div>
         </div>
