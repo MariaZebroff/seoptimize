@@ -1,6 +1,7 @@
 import psi from 'psi'
 import { BrokenLinkCheckerService } from './brokenLinkChecker'
 import { EnhancedSEOAnalysis, SEOAnalysisResult } from './enhancedSEOAnalysis'
+import { ContentQualityAnalyzer, ContentQualityMetrics } from './contentQualityAnalyzer'
 
 export interface PSIAuditResult {
   title: string
@@ -74,6 +75,9 @@ export interface PSIAuditResult {
   // Enhanced SEO Analysis
   enhancedSEOAnalysis?: SEOAnalysisResult
   
+  // Content Quality Analysis
+  contentQualityAnalysis?: ContentQualityMetrics
+  
   // PSI API Results
   psiResults?: {
     mobile: any
@@ -137,6 +141,23 @@ export class PSIAuditService {
           enhancedSEOAnalysis = null
         }
 
+        // Perform content quality analysis
+        console.log('📝 Starting content quality analysis...')
+        let contentQualityAnalysis
+        try {
+          contentQualityAnalysis = ContentQualityAnalyzer.analyze(htmlContent, url)
+          console.log('✅ Content quality analysis completed:', {
+            overallScore: contentQualityAnalysis.overallScore,
+            grade: contentQualityAnalysis.grade,
+            wordCount: contentQualityAnalysis.wordCount,
+            readabilityScore: contentQualityAnalysis.readabilityScore,
+            recommendationsCount: contentQualityAnalysis.recommendations.length
+          })
+        } catch (error) {
+          console.error('❌ Content quality analysis failed:', error instanceof Error ? error.message : 'Unknown error')
+          contentQualityAnalysis = null
+        }
+
         // Perform broken link checking
         console.log('🔍 Starting broken link check...')
         let brokenLinkResult
@@ -197,6 +218,7 @@ export class PSIAuditService {
           timestamp: new Date().toISOString(),
           status: 'success',
           enhancedSEOAnalysis,
+          contentQualityAnalysis,
           psiResults: {
             mobile: mobileResults,
             desktop: desktopResults

@@ -7,6 +7,8 @@ import DynamicRecommendations from './DynamicRecommendations'
 import EnhancedSEOResults from './EnhancedSEOResults'
 import type { DetailedAuditResults } from '@/lib/puppeteerAuditService'
 import type { SEOAnalysisResult } from '@/lib/enhancedSEOAnalysis'
+import type { ContentQualityMetrics } from '@/lib/contentQualityAnalyzer'
+import ContentQualityAnalysis from './ContentQualityAnalysis'
 
 interface AuditResult {
   title: string
@@ -92,6 +94,9 @@ interface AuditResult {
   
   // Enhanced SEO Analysis
   enhancedSEOAnalysis?: SEOAnalysisResult
+  
+  // Content Quality Analysis
+  contentQualityAnalysis?: ContentQualityMetrics
 }
 
 interface AuditResultsProps {
@@ -791,7 +796,7 @@ const BrokenLinksCard = ({ brokenLinkDetails, brokenLinkSummary }: {
 }
 
 export default function AuditResults({ result, loading, error }: AuditResultsProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices' | 'content-quality'>('overview')
   
   // Debug logging for active tab
   console.log('🔍 AuditResults - Current active tab:', activeTab)
@@ -847,7 +852,8 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
     { id: 'seo', name: 'SEO Data', icon: '🔍' },
     { id: 'performance', name: 'Performance', icon: '⚡' },
     { id: 'accessibility', name: 'Accessibility', icon: '♿' },
-    { id: 'best-practices', name: 'Best Practices', icon: '✅' }
+    { id: 'best-practices', name: 'Best Practices', icon: '✅' },
+    { id: 'content-quality', name: 'Content Quality', icon: '📝' }
   ]
 
   return (
@@ -978,6 +984,7 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
                   </div>
                 )
               })()}
+
               
               {/* Basic SEO Data */}
               <div className="bg-white rounded-lg shadow">
@@ -1247,6 +1254,28 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
               {/* Fallback to static info if no dynamic data */}
               {!dynamicInsights?.['best-practices'] && (
                 <BestPracticesInfo score={result.bestPracticesScore} />
+              )}
+            </div>
+          )}
+
+          {activeTab === 'content-quality' && (
+            <div className="space-y-6">
+              {result.contentQualityAnalysis ? (
+                <div className="bg-white rounded-lg shadow-md">
+                  <div className="p-6 border-b border-gray-200">
+                    <h2 className="text-xl font-semibold text-gray-900">Content Quality Analysis</h2>
+                    <p className="text-gray-600 mt-1">In-depth analysis of content readability, structure, and quality metrics</p>
+                  </div>
+                  <div className="p-6">
+                    <ContentQualityAnalysis analysis={result.contentQualityAnalysis} />
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <div className="text-yellow-600 text-lg font-semibold mb-2">⚠️ Content Quality Analysis Not Available</div>
+                  <p className="text-yellow-700">Content quality analysis data is not available for this audit result.</p>
+                  <p className="text-yellow-700 text-sm mt-2">This feature analyzes content readability, structure, and quality metrics.</p>
+                </div>
               )}
             </div>
           )}
