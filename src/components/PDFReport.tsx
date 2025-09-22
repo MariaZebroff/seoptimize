@@ -381,60 +381,110 @@ const PDFReportDownload: React.FC<PDFReportProps> = ({ auditData, siteName, site
 
 // Main Report Component
 const PDFReport: React.FC<PDFReportProps> = ({ auditData, siteName, siteUrl }) => {
+  const [isReportSectionExpanded, setIsReportSectionExpanded] = useState(false)
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Download Audit Report</h3>
-      </div>
-      
-      <div className="text-sm text-gray-600 mb-6">
-        Generate comprehensive reports with all audit data, scores, and recommendations. 
-        Choose between HTML (fast, web-friendly) or PDF (print-ready, professional) formats.
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* HTML Report Option */}
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center mb-3">
-            <div className="flex-shrink-0">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h4 className="text-lg font-medium text-gray-900">HTML Report</h4>
-              <p className="text-sm text-gray-500">Fast & Web-Friendly</p>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mb-4">
-            Instant download, opens in any browser, perfect for sharing and viewing online.
-          </p>
-          <HTMLReportDownload auditData={auditData} siteName={siteName} siteUrl={siteUrl} />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <h3 className="text-lg font-semibold text-gray-900">Download Audit Report</h3>
+          <button
+            onClick={() => setIsReportSectionExpanded(!isReportSectionExpanded)}
+            className="ml-3 p-1 rounded-md hover:bg-gray-100 transition-colors"
+            aria-label={isReportSectionExpanded ? 'Collapse section' : 'Expand section'}
+          >
+            <svg 
+              className={`w-5 h-5 text-gray-500 transition-transform ${isReportSectionExpanded ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
+        <div className="text-sm text-gray-500">
+          {auditData.length > 0 ? `${auditData.length} audit${auditData.length !== 1 ? 's' : ''} available` : 'No audits available'}
+        </div>
+      </div>
+      
+      {/* Collapsible Content */}
+      {isReportSectionExpanded && (
+        <>
+          <div className="text-sm text-gray-600 mb-6">
+            Generate comprehensive reports with all audit data, scores, and recommendations. 
+            Choose between HTML (fast, web-friendly) or PDF (print-ready, professional) formats.
+          </div>
+      
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* HTML Report Option */}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-semibold text-gray-900">HTML Report</h4>
+                  <p className="text-sm text-green-600 font-medium">Fast & Web-Friendly</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Instant download, opens in any browser, perfect for sharing and viewing online.
+              </p>
+              <div className="flex items-center text-xs text-gray-500 mb-4">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Best for: Quick sharing, online viewing, team collaboration
+              </div>
+              <HTMLReportDownload auditData={auditData} siteName={siteName} siteUrl={siteUrl} />
+            </div>
 
-        {/* PDF Report Option */}
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center mb-3">
-            <div className="flex-shrink-0">
-              <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h4 className="text-lg font-medium text-gray-900">PDF Report</h4>
-              <p className="text-sm text-gray-500">Professional & Print-Ready</p>
+            {/* PDF Report Option */}
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-semibold text-gray-900">PDF Report</h4>
+                  <p className="text-sm text-indigo-600 font-medium">Professional & Print-Ready</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                High-quality PDF format, perfect for printing, archiving, and professional presentations.
+              </p>
+              <div className="flex items-center text-xs text-gray-500 mb-4">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Best for: Printing, archiving, client presentations
+              </div>
+              <PDFReportDownload auditData={auditData} siteName={siteName} siteUrl={siteUrl} />
             </div>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
-            High-quality PDF format, perfect for printing, archiving, and professional presentations.
-          </p>
-          <PDFReportDownload auditData={auditData} siteName={siteName} siteUrl={siteUrl} />
-        </div>
-      </div>
+        </>
+      )}
       
       {auditData.length === 0 && (
-        <div className="mt-6 text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
-          No audit data available. Run an audit first to generate a report.
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-amber-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-amber-800">No audit data available</p>
+              <p className="text-xs text-amber-600">Run an audit first to generate comprehensive reports</p>
+            </div>
+          </div>
         </div>
       )}
     </div>

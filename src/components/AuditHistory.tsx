@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { getAuditHistory, deleteAudit } from "@/lib/supabaseAuth"
 import AuditScoreChart from "./AuditScoreChart"
 import PDFReport from "./PDFReport"
-import EnhancedSEOResults from "./EnhancedSEOResults"
 
 interface AuditRecord {
   id: string
@@ -89,6 +88,7 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<'images' | 'links'>('images')
   const [expandedAudits, setExpandedAudits] = useState<Set<string>>(new Set())
   const [activeDetailTab, setActiveDetailTab] = useState<{[auditId: string]: 'seo'}>({})
+  const [isImageLinkAnalysisExpanded, setIsImageLinkAnalysisExpanded] = useState(false)
 
   useEffect(() => {
     // Add a small delay to ensure database has been updated
@@ -370,45 +370,28 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
         />
       </div>
       
-      {/* Enhanced SEO Analysis Section */}
-      {audits.length > 0 && audits[0].status === 'success' && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Latest SEO Analysis</h3>
-            {audits[0].id.startsWith('latest-') && (
-              <div className="flex items-center text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Just Updated
-              </div>
-            )}
-          </div>
-          <EnhancedSEOResults 
-            analysis={audits[0].enhancedSEOAnalysis} 
-            auditData={{
-              h1_tags: audits[0].h1_tags,
-              h2_tags: audits[0].h2_tags,
-              h3_tags: audits[0].h3_tags,
-              h4_tags: audits[0].h4_tags,
-              h5_tags: audits[0].h5_tags,
-              h6_tags: audits[0].h6_tags,
-              h1_word_count: audits[0].h1_word_count,
-              h2_word_count: audits[0].h2_word_count,
-              h3_word_count: audits[0].h3_word_count,
-              h4_word_count: audits[0].h4_word_count,
-              h5_word_count: audits[0].h5_word_count,
-              h6_word_count: audits[0].h6_word_count
-            }}
-          />
-        </div>
-      )}
 
       {/* Image and Link Analysis Section with Tabs */}
       {audits.length > 0 && audits[0].status === 'success' && (
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Image & Link Analysis</h3>
+            <div className="flex items-center">
+              <h3 className="text-lg font-medium text-gray-900">Image & Link Analysis</h3>
+              <button
+                onClick={() => setIsImageLinkAnalysisExpanded(!isImageLinkAnalysisExpanded)}
+                className="ml-3 p-1 rounded-md hover:bg-gray-100 transition-colors"
+                aria-label={isImageLinkAnalysisExpanded ? 'Collapse section' : 'Expand section'}
+              >
+                <svg 
+                  className={`w-5 h-5 text-gray-500 transition-transform ${isImageLinkAnalysisExpanded ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
             {audits[0].id.startsWith('latest-') && (
               <div className="flex items-center text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -419,8 +402,11 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
             )}
           </div>
           
-          {/* Tab Navigation */}
-          <div className="border-b border-gray-200 mb-6">
+          {/* Collapsible Content */}
+          {isImageLinkAnalysisExpanded && (
+            <>
+              {/* Tab Navigation */}
+              <div className="border-b border-gray-200 mb-6">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveAnalysisTab('images')}
@@ -635,6 +621,8 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
                 </div>
               )}
             </div>
+          )}
+            </>
           )}
         </div>
       )}
