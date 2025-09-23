@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [newPageUrl, setNewPageUrl] = useState("")
   const [newPageTitle, setNewPageTitle] = useState("")
   const [isAddingPage, setIsAddingPage] = useState(false)
+  const [pageUrlError, setPageUrlError] = useState<string | null>(null)
   const [isDetectingPages, setIsDetectingPages] = useState<string | null>(null)
   const router = useRouter()
 
@@ -129,8 +130,52 @@ export default function Dashboard() {
     })
   }
 
+  const validatePageUrl = (url: string, siteUrl: string) => {
+    if (!url.trim()) {
+      setPageUrlError(null)
+      return true
+    }
+
+    try {
+      const mainUrl = new URL(siteUrl)
+      const subPageUrl = new URL(url.trim())
+      
+      if (mainUrl.hostname !== subPageUrl.hostname) {
+        setPageUrlError(`Must be from the same domain: ${mainUrl.hostname}`)
+        return false
+      }
+      
+      setPageUrlError(null)
+      return true
+    } catch (error) {
+      setPageUrlError('Please enter a valid URL')
+      return false
+    }
+  }
+
   const handleAddPage = async (siteId: string) => {
     if (!newPageUrl.trim()) return
+
+    // Find the site to get its domain for validation
+    const site = sites.find(s => s.id === siteId)
+    if (!site) {
+      alert('Site not found')
+      return
+    }
+
+    // Validate that the sub-page URL is from the same domain
+    try {
+      const mainUrl = new URL(site.url)
+      const subPageUrl = new URL(newPageUrl.trim())
+      
+      if (mainUrl.hostname !== subPageUrl.hostname) {
+        alert(`Sub-page must be from the same domain as the main page (${mainUrl.hostname}). Please enter a URL from ${mainUrl.hostname}`)
+        return
+      }
+    } catch (error) {
+      alert('Please enter a valid URL')
+      return
+    }
 
     setIsAddingPage(true)
     try {
@@ -140,6 +185,7 @@ export default function Dashboard() {
       } else {
         setNewPageUrl("")
         setNewPageTitle("")
+        setPageUrlError(null)
         setShowAddPage(null)
         loadSites() // Reload sites to get updated pages
       }
@@ -237,7 +283,7 @@ export default function Dashboard() {
                 onClick={() => router.push("/audit")}
                 className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
               >
-                Site Audit
+                Page Audit
               </button>
             </div>
             <div className="flex items-center space-x-4">
@@ -446,10 +492,26 @@ export default function Dashboard() {
                               <input
                                 type="url"
                                 value={newPageUrl}
-                                onChange={(e) => setNewPageUrl(e.target.value)}
+                                onChange={(e) => {
+                                  setNewPageUrl(e.target.value)
+                                  validatePageUrl(e.target.value, site.url)
+                                }}
                                 placeholder={`${site.url}/page-path`}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                                  pageUrlError 
+                                    ? 'border-red-300 focus:ring-red-500 bg-red-50' 
+                                    : 'border-gray-300 focus:ring-indigo-500'
+                                }`}
                               />
+                              {pageUrlError ? (
+                                <p className="text-xs text-red-600 mt-1">
+                                  {pageUrlError}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Must be from the same domain: <span className="font-medium">{new URL(site.url).hostname}</span>
+                                </p>
+                              )}
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -466,7 +528,7 @@ export default function Dashboard() {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleAddPage(site.id)}
-                                disabled={isAddingPage || !newPageUrl.trim()}
+                                disabled={isAddingPage || !newPageUrl.trim() || !!pageUrlError}
                                 className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
                               >
                                 {isAddingPage ? 'Adding...' : 'Add Sub-page'}
@@ -476,6 +538,7 @@ export default function Dashboard() {
                                   setShowAddPage(null)
                                   setNewPageUrl("")
                                   setNewPageTitle("")
+                                  setPageUrlError(null)
                                 }}
                                 className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
                               >
