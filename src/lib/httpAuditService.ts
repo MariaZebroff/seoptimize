@@ -251,12 +251,12 @@ export class HttpAuditService {
     const metaDescriptionWordCount = countWords(metaDescription)
 
     // Extract all heading levels
-    const h1Matches = html.match(/<h1[^>]*>(.*?)<\/h1>/gi)
-    const h2Matches = html.match(/<h2[^>]*>(.*?)<\/h2>/gi)
-    const h3Matches = html.match(/<h3[^>]*>(.*?)<\/h3>/gi)
-    const h4Matches = html.match(/<h4[^>]*>(.*?)<\/h4>/gi)
-    const h5Matches = html.match(/<h5[^>]*>(.*?)<\/h5>/gi)
-    const h6Matches = html.match(/<h6[^>]*>(.*?)<\/h6>/gi)
+    const h1Matches = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)
+    const h2Matches = html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)
+    const h3Matches = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)
+    const h4Matches = html.match(/<h4[^>]*>([\s\S]*?)<\/h4>/gi)
+    const h5Matches = html.match(/<h5[^>]*>([\s\S]*?)<\/h5>/gi)
+    const h6Matches = html.match(/<h6[^>]*>([\s\S]*?)<\/h6>/gi)
 
     const h1Tags = extractHeadingText(h1Matches)
     const h2Tags = extractHeadingText(h2Matches)

@@ -5,6 +5,7 @@ import { DynamicRecommendationEngine } from '@/lib/dynamicRecommendations'
 import PerformanceCharts from './PerformanceCharts'
 import DynamicRecommendations from './DynamicRecommendations'
 import EnhancedSEOResults from './EnhancedSEOResults'
+import AuditProgress from './AuditProgress'
 import type { DetailedAuditResults } from '@/lib/puppeteerAuditService'
 import type { SEOAnalysisResult } from '@/lib/enhancedSEOAnalysis'
 import type { ContentQualityMetrics } from '@/lib/contentQualityAnalyzer'
@@ -105,6 +106,7 @@ interface AuditResultsProps {
   result: AuditResult | null
   loading: boolean
   error: string | null
+  url?: string
 }
 
 const ScoreCard = ({ title, score, color, description, recommendations }: { 
@@ -797,7 +799,7 @@ const BrokenLinksCard = ({ brokenLinkDetails, brokenLinkSummary }: {
   )
 }
 
-export default function AuditResults({ result, loading, error }: AuditResultsProps) {
+export default function AuditResults({ result, loading, error, url }: AuditResultsProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices' | 'content-quality' | 'ai-content' | 'ai-keywords'>('overview')
   
   // Debug logging for active tab
@@ -816,17 +818,7 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
       : null
 
   if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow p-8">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <span className="ml-3 text-gray-600">Running site audit...</span>
-        </div>
-        <p className="text-center text-sm text-gray-500 mt-4">
-          This may take 30-60 seconds depending on the website size
-        </p>
-      </div>
-    )
+    return <AuditProgress url={url || result?.url || 'your website'} />
   }
 
   if (error) {
@@ -978,7 +970,23 @@ export default function AuditResults({ result, loading, error }: AuditResultsPro
                       <p className="text-gray-600 mt-1">Comprehensive SEO analysis with detailed suggestions and character counting</p>
                     </div>
                     <div className="p-6">
-                      <EnhancedSEOResults analysis={result.enhancedSEOAnalysis} />
+                      <EnhancedSEOResults 
+                        analysis={result.enhancedSEOAnalysis} 
+                        auditData={{
+                          h1_tags: result.h1Tags,
+                          h2_tags: result.h2Tags,
+                          h3_tags: result.h3Tags,
+                          h4_tags: result.h4Tags,
+                          h5_tags: result.h5Tags,
+                          h6_tags: result.h6Tags,
+                          h1_word_count: result.h1WordCount,
+                          h2_word_count: result.h2WordCount,
+                          h3_word_count: result.h3WordCount,
+                          h4_word_count: result.h4WordCount,
+                          h5_word_count: result.h5WordCount,
+                          h6_word_count: result.h6WordCount
+                        }}
+                      />
                     </div>
                   </div>
                 ) : (

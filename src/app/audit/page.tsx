@@ -162,7 +162,7 @@ function AuditPageContent() {
                   disabled={isAuditing || !url.trim()}
                   className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isAuditing ? 'Running Audit...' : 'Start Audit'}
+                  {isAuditing ? 'Analyzing Website...' : 'Start Audit'}
                 </button>
               </div>
             </form>
@@ -172,7 +172,8 @@ function AuditPageContent() {
           <AuditResults 
             result={auditResult} 
             loading={isAuditing} 
-            error={error} 
+            error={error}
+            url={url}
           />
 
 
@@ -183,6 +184,7 @@ function AuditPageContent() {
                 siteId={siteId} 
                 limit={20} 
                 latestAuditResult={auditResult}
+                url={url}
               />
             </div>
           )}

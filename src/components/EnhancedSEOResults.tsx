@@ -5,10 +5,24 @@ import { SEOAnalysisResult, SEOSuggestion } from '@/lib/enhancedSEOAnalysis'
 
 interface EnhancedSEOResultsProps {
   analysis: SEOAnalysisResult | null | undefined
+  auditData?: {
+    h1_tags?: string[]
+    h2_tags?: string[]
+    h3_tags?: string[]
+    h4_tags?: string[]
+    h5_tags?: string[]
+    h6_tags?: string[]
+    h1_word_count?: number
+    h2_word_count?: number
+    h3_word_count?: number
+    h4_word_count?: number
+    h5_word_count?: number
+    h6_word_count?: number
+  }
 }
 
-export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'suggestions' | 'details'>('overview')
+export default function EnhancedSEOResults({ analysis, auditData }: EnhancedSEOResultsProps) {
+  const [activeTab, setActiveTab] = useState<'details'>('details')
   const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null)
 
   // Debug logging
@@ -55,18 +69,18 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
     contentCharacterCount: analysis.contentCharacterCount || 0,
     title: analysis.title || '',
     metaDescription: analysis.metaDescription || '',
-    h1Tags: analysis.h1Tags || [],
-    h2Tags: analysis.h2Tags || [],
-    h3Tags: analysis.h3Tags || [],
-    h4Tags: analysis.h4Tags || [],
-    h5Tags: analysis.h5Tags || [],
-    h6Tags: analysis.h6Tags || [],
-    h1WordCount: analysis.h1WordCount || 0,
-    h2WordCount: analysis.h2WordCount || 0,
-    h3WordCount: analysis.h3WordCount || 0,
-    h4WordCount: analysis.h4WordCount || 0,
-    h5WordCount: analysis.h5WordCount || 0,
-    h6WordCount: analysis.h6WordCount || 0
+    h1Tags: analysis.h1Tags || auditData?.h1_tags || [],
+    h2Tags: analysis.h2Tags || auditData?.h2_tags || [],
+    h3Tags: analysis.h3Tags || auditData?.h3_tags || [],
+    h4Tags: analysis.h4Tags || auditData?.h4_tags || [],
+    h5Tags: analysis.h5Tags || auditData?.h5_tags || [],
+    h6Tags: analysis.h6Tags || auditData?.h6_tags || [],
+    h1WordCount: analysis.h1WordCount || auditData?.h1_word_count || 0,
+    h2WordCount: analysis.h2WordCount || auditData?.h2_word_count || 0,
+    h3WordCount: analysis.h3WordCount || auditData?.h3_word_count || 0,
+    h4WordCount: analysis.h4WordCount || auditData?.h4_word_count || 0,
+    h5WordCount: analysis.h5WordCount || auditData?.h5_word_count || 0,
+    h6WordCount: analysis.h6WordCount || auditData?.h6_word_count || 0
   }
 
   const getScoreColor = (score: number) => {
@@ -645,33 +659,17 @@ export default function EnhancedSEOResults({ analysis }: EnhancedSEOResultsProps
 
   return (
     <div className="space-y-6">
-      {/* Tab Navigation */}
+      {/* Tab Navigation - Only Details */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
-          {[
-            { id: 'overview', label: 'Overview' },
-            { id: 'suggestions', label: `Suggestions (${safeAnalysis.suggestions.length})` },
-            { id: 'details', label: 'Details' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+          <div className="py-2 px-1 border-b-2 border-blue-500 text-blue-600 font-medium text-sm">
+            Details
+          </div>
         </nav>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'overview' && renderOverview()}
-      {activeTab === 'suggestions' && renderSuggestions()}
-      {activeTab === 'details' && renderDetails()}
+      {/* Tab Content - Only Details */}
+      {renderDetails()}
     </div>
   )
 }
