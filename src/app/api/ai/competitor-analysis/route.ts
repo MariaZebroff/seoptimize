@@ -82,16 +82,10 @@ function generateFallbackCompetitorAnalysis(competitorUrl: string) {
       'Content depth could be enhanced for better SEO'
     ],
     opportunities: [
-      'Opportunity to improve page speed optimization',
-      'Potential for better content marketing strategy',
-      'Room for enhanced social media integration',
-      'Could benefit from more comprehensive internal linking'
-    ],
-    recommendations: [
-      'Focus on improving Core Web Vitals scores',
-      'Develop a more robust content calendar',
-      'Implement structured data markup',
-      'Optimize images and implement lazy loading'
+      'Your site can gain advantage by improving page speed optimization',
+      'Your site has potential for better content marketing strategy',
+      'Your site has room for enhanced social media integration',
+      'Your site could benefit from more comprehensive internal linking'
     ],
     comparison: {
       seoScore: Math.floor(Math.random() * 40) + 60, // 60-100

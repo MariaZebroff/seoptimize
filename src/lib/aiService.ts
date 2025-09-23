@@ -648,7 +648,6 @@ Target Keywords: ${targetKeywords.join(', ')}
     strengths: string[]
     weaknesses: string[]
     opportunities: string[]
-    recommendations: string[]
     comparison: {
       seoScore: number
       performanceScore: number
@@ -679,30 +678,33 @@ Target Keywords: ${targetKeywords.join(', ')}
       } : null
 
       const prompt = `
-You are an expert SEO analyst. Based on the current page's metrics, provide a strategic competitor analysis for ${competitorUrl}.
+You are an expert SEO analyst. Based on the current page's metrics, provide a strategic competitor analysis comparing your site with ${competitorUrl}.
 
-Current Page: ${currentUrl} (${currentDomain})
-Current Page Metrics:
+YOUR SITE: ${currentUrl} (${currentDomain})
+YOUR SITE METRICS:
 ${essentialData ? JSON.stringify(essentialData, null, 2) : 'No audit data available'}
 
-Analyze the competitor ${competitorUrl} and provide strategic insights. Base your analysis on general SEO best practices and what you know about competitive analysis. You don't need specific metrics from the competitor - provide strategic recommendations based on industry standards.
+COMPETITOR TO ANALYZE: ${competitorUrl} (${competitorDomain})
 
-Provide a comprehensive competitor analysis with:
+Provide a comprehensive competitor analysis that compares your site's performance against this competitor. Focus on:
 
-1. STRENGTHS: What the competitor likely does well (based on industry standards)
-2. WEAKNESSES: Common areas where competitors typically struggle
-3. OPPORTUNITIES: Strategic gaps the current page can exploit
-4. RECOMMENDATIONS: Specific actionable steps to improve the current page
-5. COMPARISON: Estimated scores (0-100) for key metrics
+1. STRENGTHS: What the COMPETITOR likely does well (their advantages)
+2. WEAKNESSES: Areas where the COMPETITOR is likely weaker (their disadvantages)
+3. OPPORTUNITIES: Strategic gaps that your site can exploit to gain competitive advantage
+4. COMPARISON: Estimated scores (0-100) for key metrics comparing competitor vs your site
+
+Base your analysis on:
+- Your site's actual performance metrics (SEO: ${essentialData?.seoScore || 'N/A'}, Performance: ${essentialData?.performanceScore || 'N/A'}, etc.)
+- Industry best practices and competitive intelligence
+- Strategic positioning opportunities
 
 CRITICAL: You MUST return ONLY valid JSON. Do not include any explanatory text, questions, or additional content.
 
 Required JSON format:
 {
-  "strengths": ["strength 1", "strength 2", "strength 3", "strength 4"],
-  "weaknesses": ["weakness 1", "weakness 2", "weakness 3", "weakness 4"],
-  "opportunities": ["opportunity 1", "opportunity 2", "opportunity 3", "opportunity 4"],
-  "recommendations": ["recommendation 1", "recommendation 2", "recommendation 3", "recommendation 4"],
+  "strengths": ["competitor strength 1", "competitor strength 2", "competitor strength 3", "competitor strength 4"],
+  "weaknesses": ["competitor weakness 1", "competitor weakness 2", "competitor weakness 3", "competitor weakness 4"],
+  "opportunities": ["opportunity for your site 1", "opportunity for your site 2", "opportunity for your site 3", "opportunity for your site 4"],
   "comparison": {
     "seoScore": 85,
     "performanceScore": 72,
@@ -736,9 +738,26 @@ Return ONLY the JSON object above, nothing else.
 
       const parsed = this.cleanAndParseJSON(responseContent)
       
+      // Debug logging
+      console.log('AI Response Content:', responseContent)
+      console.log('Parsed Response:', parsed)
+      console.log('Response Keys:', Object.keys(parsed || {}))
+      
+      // Handle case where AI returns old format with recommendations
+      if (parsed.recommendations) {
+        console.log('AI returned old format with recommendations, removing recommendations field')
+        delete parsed.recommendations
+      }
+      
       // Validate the response structure
-      if (!parsed.strengths || !parsed.weaknesses || !parsed.opportunities || !parsed.recommendations || !parsed.comparison) {
+      if (!parsed.strengths || !parsed.weaknesses || !parsed.opportunities || !parsed.comparison) {
         console.error('Invalid AI response structure:', parsed)
+        console.error('Missing fields:', {
+          strengths: !!parsed.strengths,
+          weaknesses: !!parsed.weaknesses,
+          opportunities: !!parsed.opportunities,
+          comparison: !!parsed.comparison
+        })
         throw new Error('Invalid response structure from AI')
       }
 
