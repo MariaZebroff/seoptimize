@@ -10,7 +10,7 @@ import AuditHistory from "@/components/AuditHistory"
 import type { User } from "@supabase/supabase-js"
 
 // Use the same interface as AuditResults component
-type AuditResult = any
+type AuditResult = any 
 
 interface Site {
   id: string
