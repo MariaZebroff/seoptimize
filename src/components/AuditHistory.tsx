@@ -79,9 +79,10 @@ interface AuditHistoryProps {
   siteId?: string
   limit?: number
   latestAuditResult?: any
+  url?: string
 }
 
-export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: AuditHistoryProps) {
+export default function AuditHistory({ siteId, limit = 20, latestAuditResult, url }: AuditHistoryProps) {
   const [audits, setAudits] = useState<AuditRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -97,7 +98,7 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
     }, 500)
     
     return () => clearTimeout(timer)
-  }, [siteId, limit])
+  }, [siteId, limit, url])
 
   // Update audits when latestAuditResult changes
   useEffect(() => {
@@ -185,10 +186,16 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult }: 
         setError(error.message)
       } else {
         // Map database column names to expected property names
-        const mappedAudits = (data || []).map(audit => ({
+        let mappedAudits = (data || []).map(audit => ({
           ...audit,
           enhancedSEOAnalysis: audit.enhanced_seo_analysis
         }))
+        
+        // Filter by URL if provided
+        if (url) {
+          mappedAudits = mappedAudits.filter(audit => audit.url === url)
+        }
+        
         setAudits(mappedAudits)
       }
     } catch (err) {

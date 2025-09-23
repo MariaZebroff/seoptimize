@@ -184,6 +184,7 @@ function AuditPageContent() {
                 siteId={siteId} 
                 limit={20} 
                 latestAuditResult={auditResult}
+                url={url}
               />
             </div>
           )}
