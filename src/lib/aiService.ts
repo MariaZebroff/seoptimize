@@ -636,4 +636,117 @@ Target Keywords: ${targetKeywords.join(', ')}
       throw new Error('Failed to generate title suggestions')
     }
   }
+
+  /**
+   * Generate competitor analysis comparing current site with competitor
+   */
+  static async generateCompetitorAnalysis(
+    currentUrl: string,
+    competitorUrl: string,
+    currentAuditData?: any
+  ): Promise<{
+    strengths: string[]
+    weaknesses: string[]
+    opportunities: string[]
+    recommendations: string[]
+    comparison: {
+      seoScore: number
+      performanceScore: number
+      contentQuality: number
+      technicalSEO: number
+    }
+  }> {
+    try {
+      const currentDomain = new URL(currentUrl).hostname
+      const competitorDomain = new URL(competitorUrl).hostname
+      
+      // Extract only essential data to reduce token usage
+      const essentialData = currentAuditData ? {
+        title: currentAuditData.title || 'N/A',
+        metaDescription: currentAuditData.metaDescription || 'N/A',
+        h1Count: currentAuditData.h1Count || 0,
+        h2Count: currentAuditData.h2Count || 0,
+        h3Count: currentAuditData.h3Count || 0,
+        performanceScore: currentAuditData.performanceScore || 0,
+        seoScore: currentAuditData.seoScore || 0,
+        accessibilityScore: currentAuditData.accessibilityScore || 0,
+        bestPracticesScore: currentAuditData.bestPracticesScore || 0,
+        mobileScore: currentAuditData.mobileScore || 0,
+        brokenLinks: currentAuditData.brokenLinks || 0,
+        totalLinks: currentAuditData.totalLinks || 0,
+        wordCount: currentAuditData.wordCount || 0,
+        readabilityScore: currentAuditData.readabilityScore || 0
+      } : null
+
+      const prompt = `
+You are an expert SEO analyst. Based on the current page's metrics, provide a strategic competitor analysis for ${competitorUrl}.
+
+Current Page: ${currentUrl} (${currentDomain})
+Current Page Metrics:
+${essentialData ? JSON.stringify(essentialData, null, 2) : 'No audit data available'}
+
+Analyze the competitor ${competitorUrl} and provide strategic insights. Base your analysis on general SEO best practices and what you know about competitive analysis. You don't need specific metrics from the competitor - provide strategic recommendations based on industry standards.
+
+Provide a comprehensive competitor analysis with:
+
+1. STRENGTHS: What the competitor likely does well (based on industry standards)
+2. WEAKNESSES: Common areas where competitors typically struggle
+3. OPPORTUNITIES: Strategic gaps the current page can exploit
+4. RECOMMENDATIONS: Specific actionable steps to improve the current page
+5. COMPARISON: Estimated scores (0-100) for key metrics
+
+CRITICAL: You MUST return ONLY valid JSON. Do not include any explanatory text, questions, or additional content.
+
+Required JSON format:
+{
+  "strengths": ["strength 1", "strength 2", "strength 3", "strength 4"],
+  "weaknesses": ["weakness 1", "weakness 2", "weakness 3", "weakness 4"],
+  "opportunities": ["opportunity 1", "opportunity 2", "opportunity 3", "opportunity 4"],
+  "recommendations": ["recommendation 1", "recommendation 2", "recommendation 3", "recommendation 4"],
+  "comparison": {
+    "seoScore": 85,
+    "performanceScore": 72,
+    "contentQuality": 78,
+    "technicalSEO": 90
+  }
+}
+
+Return ONLY the JSON object above, nothing else.
+`
+
+      const client = getOpenAIClient()
+      const response = await client.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert SEO analyst specializing in competitive analysis and strategic SEO recommendations. Provide actionable, data-driven insights.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+
+      const responseContent = response.choices[0]?.message?.content
+      if (!responseContent) throw new Error('No response from AI')
+
+      const parsed = this.cleanAndParseJSON(responseContent)
+      
+      // Validate the response structure
+      if (!parsed.strengths || !parsed.weaknesses || !parsed.opportunities || !parsed.recommendations || !parsed.comparison) {
+        console.error('Invalid AI response structure:', parsed)
+        throw new Error('Invalid response structure from AI')
+      }
+
+      return parsed
+
+    } catch (error) {
+      console.error('Error generating competitor analysis:', error)
+      throw new Error('Failed to generate competitor analysis')
+    }
+  }
 }

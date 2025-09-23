@@ -269,19 +269,19 @@ export default function Dashboard() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">SEO Dashboard</h1>
             <p className="mt-2 text-gray-600">
-              Manage your websites and track their SEO performance.
+              Manage your pages and track their SEO performance.
             </p>
           </div>
 
-          {/* Add Site Section */}
+          {/* Add Page Section */}
           <div className="bg-white shadow rounded-lg p-6 mb-8">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Your Sites</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Your Pages</h2>
               <button
                 onClick={() => setShowAddSite(!showAddSite)}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                {showAddSite ? 'Cancel' : 'Add Site'}
+                {showAddSite ? 'Cancel' : 'Add Page'}
               </button>
             </div>
 
@@ -290,7 +290,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="siteUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                      Website URL *
+                      Page URL *
                     </label>
                     <input
                       type="url"
@@ -311,7 +311,7 @@ export default function Dashboard() {
                       id="siteTitle"
                       value={newSiteTitle}
                       onChange={(e) => setNewSiteTitle(e.target.value)}
-                      placeholder="My Website"
+                      placeholder="My Page"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -346,13 +346,13 @@ export default function Dashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No sites added yet</h3>
-                <p className="text-gray-500 mb-4">Add your first website to start tracking its SEO performance.</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No pages added yet</h3>
+                <p className="text-gray-500 mb-4">Add your first page to start tracking its SEO performance.</p>
                 <button
                   onClick={() => setShowAddSite(true)}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                 >
-                  Add Your First Site
+                  Add Your First Page
                 </button>
               </div>
             ) : (
@@ -391,7 +391,7 @@ export default function Dashboard() {
                             onClick={() => handleDeleteSite(site.id)}
                             className="text-red-600 hover:text-red-800 text-sm"
                           >
-                            Delete Site
+                            Delete
                           </button>
                         </div>
                         <p className="text-sm text-gray-600 mb-2 truncate">{site.url}</p>
@@ -423,14 +423,14 @@ export default function Dashboard() {
                                 Crawling Site...
                               </>
                             ) : (
-                              'Auto-detect Pages'
+                              'Auto-detect Sub-pages'
                             )}
                           </button>
                           <button
                             onClick={() => setShowAddPage(showAddPage === site.id ? null : site.id)}
                             className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
                           >
-                            Add Page Manually
+                            Add Sub-page Manually
                           </button>
                         </div>
                       </div>
@@ -441,7 +441,7 @@ export default function Dashboard() {
                           <div className="space-y-3">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Page URL
+                                Sub-page URL
                               </label>
                               <input
                                 type="url"
@@ -459,7 +459,7 @@ export default function Dashboard() {
                                 type="text"
                                 value={newPageTitle}
                                 onChange={(e) => setNewPageTitle(e.target.value)}
-                                placeholder="Page title"
+                                placeholder="Sub-page title"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               />
                             </div>
@@ -469,7 +469,7 @@ export default function Dashboard() {
                                 disabled={isAddingPage || !newPageUrl.trim()}
                                 className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
                               >
-                                {isAddingPage ? 'Adding...' : 'Add Page'}
+                                {isAddingPage ? 'Adding...' : 'Add Sub-page'}
                               </button>
                               <button
                                 onClick={() => {
@@ -486,7 +486,7 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* Pages List */}
+                      {/* Sub-pages List */}
                       {isExpanded && (
                         <div className="p-4">
                           {pages.length === 0 ? (
@@ -494,8 +494,8 @@ export default function Dashboard() {
                               <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
-                              <p>No pages added yet</p>
-                              <p className="text-sm">Use "Auto-detect Pages" or "Add Page Manually" to get started</p>
+                              <p>No sub-pages added yet</p>
+                              <p className="text-sm">Use "Auto-detect Sub-pages" or "Add Sub-page Manually" to get started</p>
                             </div>
                           ) : (
                             <div className="space-y-2">

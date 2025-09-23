@@ -33,12 +33,12 @@ export default function URLInputForm({ onUrlSubmit, isLoading = false }: URLInpu
     setError('')
 
     if (!url.trim()) {
-      setError('Please enter a website URL')
+      setError('Please enter a page URL')
       return
     }
 
     if (!validateUrl(url)) {
-      setError('Please enter a valid website URL (e.g., example.com or https://example.com)')
+      setError('Please enter a valid page URL (e.g., example.com or https://example.com)')
       return
     }
 
@@ -61,12 +61,12 @@ export default function URLInputForm({ onUrlSubmit, isLoading = false }: URLInpu
     setError('')
 
     if (!url.trim()) {
-      setError('Please enter a website URL')
+      setError('Please enter a page URL')
       return
     }
 
     if (!validateUrl(url)) {
-      setError('Please enter a valid website URL (e.g., example.com or https://example.com)')
+      setError('Please enter a valid page URL (e.g., example.com or https://example.com)')
       return
     }
 
@@ -86,17 +86,17 @@ export default function URLInputForm({ onUrlSubmit, isLoading = false }: URLInpu
         <div className="text-6xl mb-4">🤖</div>
         <h1 className="text-3xl font-bold text-gray-900 mb-4">AI SEO Dashboard</h1>
         <p className="text-xl text-gray-600 mb-2">
-          Get AI-powered SEO insights and recommendations for your website
+          Get AI-powered SEO insights and recommendations for your page
         </p>
         <p className="text-gray-500">
-          Enter your website URL to start analyzing with advanced AI
+          Enter your page URL to start analyzing with advanced AI
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
-            Website URL
+            Page URL
           </label>
           <div className="relative">
             <input
@@ -104,7 +104,7 @@ export default function URLInputForm({ onUrlSubmit, isLoading = false }: URLInpu
               id="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="Enter your website URL (e.g., example.com)"
+              placeholder="Enter your page URL (e.g., example.com)"
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                 error ? 'border-red-300' : 'border-gray-300'
               }`}
@@ -181,7 +181,7 @@ export default function URLInputForm({ onUrlSubmit, isLoading = false }: URLInpu
           <div className="ml-3">
             <h3 className="text-sm font-medium text-blue-800">AI-Powered Analysis</h3>
             <p className="text-sm text-blue-700 mt-1">
-              Our AI will analyze your website's SEO performance, content quality, and provide personalized recommendations to improve your search rankings.
+              Our AI will analyze your page's SEO performance, content quality, and provide personalized recommendations to improve your search rankings.
             </p>
           </div>
         </div>

@@ -12,6 +12,7 @@ import type { ContentQualityMetrics } from '@/lib/contentQualityAnalyzer'
 import ContentQualityAnalysis from './ContentQualityAnalysis'
 import AIContentGenerator from './AIContentGenerator'
 import AIKeywordResearch from './AIKeywordResearch'
+import AICompetitorAnalysis from './AICompetitorAnalysis'
 
 interface AuditResult {
   title: string
@@ -800,7 +801,7 @@ const BrokenLinksCard = ({ brokenLinkDetails, brokenLinkSummary }: {
 }
 
 export default function AuditResults({ result, loading, error, url }: AuditResultsProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices' | 'content-quality' | 'ai-content' | 'ai-keywords'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices' | 'content-quality' | 'ai-content' | 'ai-keywords' | 'ai-competitors'>('overview')
   
   // Debug logging for active tab
   console.log('🔍 AuditResults - Current active tab:', activeTab)
@@ -849,7 +850,8 @@ export default function AuditResults({ result, loading, error, url }: AuditResul
     { id: 'best-practices', name: 'Best Practices', icon: '✅' },
     { id: 'content-quality', name: 'Content Quality', icon: '📝' },
     { id: 'ai-content', name: 'AI Content', icon: '✨' },
-    { id: 'ai-keywords', name: 'AI Keywords', icon: '🔍' }
+    { id: 'ai-keywords', name: 'AI Keywords', icon: '🔍' },
+    { id: 'ai-competitors', name: 'AI Competitors', icon: '🏆' }
   ]
 
   return (
@@ -1310,6 +1312,15 @@ export default function AuditResults({ result, loading, error, url }: AuditResul
                 url={result.url}
                 currentKeywords={[]}
                 industry="general"
+              />
+            </div>
+          )}
+
+          {activeTab === 'ai-competitors' && (
+            <div className="space-y-6">
+              <AICompetitorAnalysis
+                currentUrl={result.url}
+                currentAuditData={result}
               />
             </div>
           )}

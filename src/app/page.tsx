@@ -91,7 +91,7 @@ export default function Home() {
               Welcome to SEO Optimize
             </h1>
             <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-              Optimize your website&apos;s SEO with AI-powered insights and intelligent recommendations.
+              Optimize your page&apos;s SEO with AI-powered insights and intelligent recommendations.
             </p>
             <div className="mt-5 max-w-2xl mx-auto sm:flex sm:justify-center md:mt-8">
               {user ? (

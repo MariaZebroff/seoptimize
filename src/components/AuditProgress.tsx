@@ -84,9 +84,9 @@ const AuditProgress: React.FC<AuditProgressProps> = ({ url }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Running Website Audit
-          </h3>
+                   <h3 className="text-xl font-bold text-gray-900 mb-2">
+                     Running Page Audit
+                   </h3>
           <p className="text-gray-600 mb-2">
             {currentMessage}
           </p>
@@ -157,9 +157,9 @@ const AuditProgress: React.FC<AuditProgressProps> = ({ url }) => {
             </svg>
             <span className="text-blue-800 font-medium">Thanks for your patience!</span>
           </div>
-          <p className="text-sm text-blue-700">
-            We're performing a comprehensive analysis. This usually takes 60-90 seconds.
-          </p>
+                   <p className="text-sm text-blue-700">
+                     We're performing a comprehensive page analysis. This usually takes 60-90 seconds.
+                   </p>
         </div>
       </div>
     </div>
