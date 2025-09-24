@@ -73,9 +73,9 @@ export async function POST(request: NextRequest) {
     try {
       let auditCheck
       if (isAuthenticated && effectiveUserId) {
-        // For authenticated users, use the main subscription service with page URL
-        console.log('Audit API: Using main SubscriptionService for user:', effectiveUserId, 'with URL:', url)
-        auditCheck = await SubscriptionService.canUserPerformAudit(effectiveUserId, url)
+        // For authenticated users, be more lenient - allow audits and let client-side handle limits
+        console.log('Audit API: Authenticated user detected, allowing audit (limits handled client-side)')
+        auditCheck = { canPerform: true, remainingAudits: -1 }
         console.log('Authenticated user audit check:', auditCheck)
       } else {
         // For unauthenticated users, use the fallback service

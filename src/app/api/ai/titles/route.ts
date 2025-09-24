@@ -3,7 +3,7 @@ import { AIService } from '@/lib/aiService'
 
 export async function POST(request: NextRequest) {
   try {
-    const { currentTitle, content, targetKeywords, count } = await request.json()
+    const { currentTitle, content, targetKeywords, count, forceKeywords } = await request.json()
 
     // Validate required fields
     if (!currentTitle || !content) {
@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
         currentTitle,
         content,
         targetKeywords || [],
-        count || 5
+        count || 5,
+        forceKeywords || false
       )
 
       return NextResponse.json({

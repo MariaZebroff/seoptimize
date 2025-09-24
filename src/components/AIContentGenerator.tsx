@@ -15,7 +15,7 @@ export default function AIContentGenerator({
   currentTitle = '',
   currentMetaDescription = '',
   content,
-  targetKeywords,
+  targetKeywords = [],
   onTitleGenerated,
   onMetaDescriptionGenerated
 }: AIContentGeneratorProps) {
@@ -24,12 +24,53 @@ export default function AIContentGenerator({
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([])
   const [generatedDescriptions, setGeneratedDescriptions] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<'titles' | 'descriptions'>('titles')
+  const [extractedKeywords, setExtractedKeywords] = useState<string[]>([])
+
+  // Extract keywords from content if none provided
+  const extractKeywordsFromContent = (text: string): string[] => {
+    // Simple keyword extraction - get words that appear multiple times and are meaningful
+    const words = text.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 3) // Only words longer than 3 characters
+    
+    const wordCount: { [key: string]: number } = {}
+    words.forEach(word => {
+      wordCount[word] = (wordCount[word] || 0) + 1
+    })
+    
+    // Return words that appear at least 2 times, sorted by frequency
+    return Object.entries(wordCount)
+      .filter(([_, count]) => count >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([word, _]) => word)
+  }
+
+  // Get effective keywords (use provided or extract from content)
+  const getEffectiveKeywords = (): string[] => {
+    if (targetKeywords.length > 0) {
+      return targetKeywords
+    }
+    
+    if (extractedKeywords.length > 0) {
+      return extractedKeywords
+    }
+    
+    // Extract keywords from content
+    const keywords = extractKeywordsFromContent(content)
+    setExtractedKeywords(keywords)
+    return keywords
+  }
 
   const generateTitles = async () => {
     setLoading(true)
     setError(null)
 
     try {
+      const effectiveKeywords = getEffectiveKeywords()
+      console.log('Generating titles with keywords:', effectiveKeywords)
+      
       const response = await fetch('/api/ai/titles', {
         method: 'POST',
         headers: {
@@ -38,8 +79,9 @@ export default function AIContentGenerator({
         body: JSON.stringify({
           currentTitle,
           content,
-          targetKeywords,
-          count: 5
+          targetKeywords: effectiveKeywords,
+          count: 5,
+          forceKeywords: true // Force AI to include keywords
         })
       })
 
@@ -68,6 +110,9 @@ export default function AIContentGenerator({
     setError(null)
 
     try {
+      const effectiveKeywords = getEffectiveKeywords()
+      console.log('Generating meta descriptions with keywords:', effectiveKeywords)
+      
       const response = await fetch('/api/ai/meta-descriptions', {
         method: 'POST',
         headers: {
@@ -76,8 +121,10 @@ export default function AIContentGenerator({
         body: JSON.stringify({
           title: currentTitle,
           content,
-          targetKeywords,
-          count: 3
+          targetKeywords: effectiveKeywords,
+          count: 3,
+          forceKeywords: true, // Force AI to include keywords
+          includeCTA: true // Force AI to include call-to-action
         })
       })
 
@@ -179,6 +226,14 @@ export default function AIContentGenerator({
                   <p className="text-gray-600 mt-1">
                     Generate SEO-optimized titles (50-60 characters recommended)
                   </p>
+                  {getEffectiveKeywords().length > 0 && (
+                    <div className="mt-2">
+                      <span className="text-sm text-gray-500">Target keywords: </span>
+                      <span className="text-sm font-medium text-indigo-600">
+                        {getEffectiveKeywords().join(', ')}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={generateTitles}
@@ -219,9 +274,9 @@ export default function AIContentGenerator({
                               {title.length} characters
                             </span>
                             <span className="text-gray-500">
-                              Keywords: {targetKeywords.filter(keyword => 
+                              Keywords: {getEffectiveKeywords().filter(keyword => 
                                 title.toLowerCase().includes(keyword.toLowerCase())
-                              ).length}/{targetKeywords.length}
+                              ).length}/{getEffectiveKeywords().length}
                             </span>
                           </div>
                         </div>
@@ -258,6 +313,14 @@ export default function AIContentGenerator({
                   <p className="text-gray-600 mt-1">
                     Generate compelling meta descriptions (150-160 characters recommended)
                   </p>
+                  {getEffectiveKeywords().length > 0 && (
+                    <div className="mt-2">
+                      <span className="text-sm text-gray-500">Target keywords: </span>
+                      <span className="text-sm font-medium text-indigo-600">
+                        {getEffectiveKeywords().join(', ')}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={generateMetaDescriptions}
@@ -298,9 +361,9 @@ export default function AIContentGenerator({
                               {description.length} characters
                             </span>
                             <span className="text-gray-500">
-                              Keywords: {targetKeywords.filter(keyword => 
+                              Keywords: {getEffectiveKeywords().filter(keyword => 
                                 description.toLowerCase().includes(keyword.toLowerCase())
-                              ).length}/{targetKeywords.length}
+                              ).length}/{getEffectiveKeywords().length}
                             </span>
                             <span className="text-gray-500">
                               CTA: {description.includes('!') || description.includes('Learn') || description.includes('Discover') ? 'Yes' : 'No'}

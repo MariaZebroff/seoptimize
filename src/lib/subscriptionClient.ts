@@ -27,8 +27,25 @@ export class SubscriptionClient {
   // Get user's current plan via API
   static async getUserPlan(): Promise<Plan> {
     try {
-      // For testing: use test endpoint that returns Basic Plan
-      const response = await fetch('/api/test/basic-plan-test')
+      // Check localStorage for recent Pro Plan payment first
+      try {
+        const paymentData = localStorage.getItem('pro_plan_payment')
+        if (paymentData) {
+          const payment = JSON.parse(paymentData)
+          // Check if payment is recent (within last 24 hours)
+          if (payment.planId === 'pro' && 
+              (Date.now() - payment.timestamp) < 24 * 60 * 60 * 1000) {
+            console.log('SubscriptionClient: Found recent Pro Plan payment')
+            const proPlan = getPlanById('pro')!
+            return proPlan
+          }
+        }
+      } catch (error) {
+        console.error('Error checking localStorage payment:', error)
+      }
+
+      // Use proper subscription API
+      const response = await fetch('/api/subscription/plan')
       if (!response.ok) {
         return getDefaultPlan() // Return free plan if error
       }
@@ -80,6 +97,25 @@ export class SubscriptionClient {
     remainingAudits: number
   }> {
     try {
+      // Check localStorage for recent Pro Plan payment first
+      try {
+        const paymentData = localStorage.getItem('pro_plan_payment')
+        if (paymentData) {
+          const payment = JSON.parse(paymentData)
+          // Check if payment is recent (within last 24 hours)
+          if (payment.planId === 'pro' && 
+              (Date.now() - payment.timestamp) < 24 * 60 * 60 * 1000) {
+            console.log('SubscriptionClient: Found recent Pro Plan payment, allowing unlimited audits')
+            return {
+              canPerform: true,
+              remainingAudits: -1 // -1 means unlimited
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error checking localStorage payment:', error)
+      }
+
       const response = await fetch('/api/subscription/audit-check')
       if (!response.ok) {
         return {

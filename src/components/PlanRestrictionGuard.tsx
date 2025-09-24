@@ -238,7 +238,41 @@ export const AuditLimitGuard: React.FC<AuditLimitGuardProps> = ({
           setRemainingAudits(freePlan.limits.auditsPerMonth)
           setReason(undefined)
         } else {
-          // For authenticated users, use Basic Plan for testing
+          // Check localStorage for recent Pro Plan payment first
+          try {
+            const paymentData = localStorage.getItem('pro_plan_payment')
+            if (paymentData) {
+              const payment = JSON.parse(paymentData)
+              // Check if payment is for this user and recent (within last 24 hours)
+              if (payment.userId === user.id && 
+                  payment.planId === 'pro' && 
+                  (Date.now() - payment.timestamp) < 24 * 60 * 60 * 1000) {
+                console.log('AuditLimitGuard: Found recent Pro Plan payment for user:', user.id)
+                const proPlan = getPlanById('pro')!
+                setCanPerformAudit(true) // Pro Plan has unlimited audits
+                setRemainingAudits(-1) // -1 means unlimited
+                setReason(undefined)
+                return
+              }
+            }
+          } catch (error) {
+            console.error('Error checking localStorage payment:', error)
+          }
+
+          // Use proper subscription API to get user's actual plan
+          const response = await fetch('/api/subscription/plan')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.plan) {
+              console.log('AuditLimitGuard: Loaded user plan:', data.plan.name)
+              setCanPerformAudit(true) // Allow audits (limits enforced by API)
+              setRemainingAudits(data.plan.limits.auditsPerMonth)
+              setReason(undefined)
+              return
+            }
+          }
+
+          // Fallback to Basic Plan for authenticated users
           console.log('AuditLimitGuard: Using Basic Plan for authenticated user')
           const basicPlan = getPlanById('basic')!
           setCanPerformAudit(true) // Allow audits (limits enforced by API)
@@ -247,6 +281,28 @@ export const AuditLimitGuard: React.FC<AuditLimitGuardProps> = ({
         }
       } catch (error) {
         console.error('Error checking audit limit:', error)
+        
+        // Check localStorage for recent Pro Plan payment in error fallback
+        if (user) {
+          try {
+            const paymentData = localStorage.getItem('pro_plan_payment')
+            if (paymentData) {
+              const payment = JSON.parse(paymentData)
+              if (payment.userId === user.id && 
+                  payment.planId === 'pro' && 
+                  (Date.now() - payment.timestamp) < 24 * 60 * 60 * 1000) {
+                const proPlan = getPlanById('pro')!
+                setCanPerformAudit(true)
+                setRemainingAudits(-1) // -1 means unlimited
+                setReason(undefined)
+                return
+              }
+            }
+          } catch (error) {
+            console.error('Error checking localStorage payment in fallback:', error)
+          }
+        }
+        
         // Fallback to allowing audits
         const basicPlan = getPlanById('basic')!
         setCanPerformAudit(true)

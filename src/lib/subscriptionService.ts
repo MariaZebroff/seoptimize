@@ -57,6 +57,26 @@ export class SubscriptionService {
     const subscription = await this.getUserSubscription(userId)
     
     if (!subscription) {
+      // Check if user has any subscription record (including Pro Plan)
+      try {
+        const { data: anySubscription, error } = await supabase
+          .from('user_subscriptions')
+          .select('plan_id, status')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .single()
+
+        if (!error && anySubscription) {
+          console.log('Found active subscription for user:', userId, 'plan:', anySubscription.plan_id)
+          const plan = getPlanById(anySubscription.plan_id)
+          if (plan) {
+            return plan
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for any subscription:', error)
+      }
+
       // For testing: return Basic Plan for authenticated users instead of free plan
       console.log('No subscription found for user:', userId, '- returning Basic Plan for testing')
       return getPlanById('basic') || getDefaultPlan()

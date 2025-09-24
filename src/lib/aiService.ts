@@ -520,10 +520,22 @@ Focus on actionable insights that will improve content performance and user enga
     title: string,
     content: string,
     targetKeywords: string[],
-    count: number = 3
+    count: number = 3,
+    forceKeywords: boolean = false,
+    includeCTA: boolean = false
   ): Promise<string[]> {
     try {
       const contentPreview = content.substring(0, 1000)
+      const keywordInstruction = forceKeywords && targetKeywords.length > 0 
+        ? `MUST include these keywords: ${targetKeywords.join(', ')}. Each description should contain at least one of these keywords.`
+        : targetKeywords.length > 0 
+          ? `Include these keywords naturally when relevant: ${targetKeywords.join(', ')}`
+          : 'Extract and include relevant keywords from the content.'
+
+      const ctaInstruction = includeCTA 
+        ? 'MUST include a strong call-to-action (Learn more, Discover, Get started, etc.)'
+        : 'Include a call-to-action when appropriate'
+
       const prompt = `
 You are an expert SEO copywriter. Generate ${count} compelling meta descriptions for the following content.
 
@@ -533,10 +545,11 @@ Target Keywords: ${targetKeywords.join(', ')}
 
     Requirements:
     - 150-160 characters each
-    - Include target keywords naturally
+    - ${keywordInstruction}
     - Compelling and click-worthy
-    - Include a call-to-action
+    - ${ctaInstruction}
     - Unique and engaging
+    - Summarize the page content effectively
 
     IMPORTANT: Return ONLY a valid JSON array. Do not include any text before or after the JSON array.
 
@@ -582,10 +595,17 @@ Target Keywords: ${targetKeywords.join(', ')}
     currentTitle: string,
     content: string,
     targetKeywords: string[],
-    count: number = 5
+    count: number = 5,
+    forceKeywords: boolean = false
   ): Promise<string[]> {
     try {
       const contentPreview = content.substring(0, 1000)
+      const keywordInstruction = forceKeywords && targetKeywords.length > 0 
+        ? `MUST include these keywords: ${targetKeywords.join(', ')}. Each title should contain at least one of these keywords.`
+        : targetKeywords.length > 0 
+          ? `Include these keywords naturally when relevant: ${targetKeywords.join(', ')}`
+          : 'Extract and include relevant keywords from the content.'
+
       const prompt = `
 You are an expert SEO copywriter. Generate ${count} optimized title suggestions for the following content.
 
@@ -595,10 +615,11 @@ Target Keywords: ${targetKeywords.join(', ')}
 
     Requirements:
     - 50-60 characters each
-    - Include target keywords naturally
+    - ${keywordInstruction}
     - Compelling and click-worthy
     - SEO-optimized
     - Unique variations
+    - Use power words when appropriate
 
     IMPORTANT: Return ONLY a valid JSON array. Do not include any text before or after the JSON array.
 
