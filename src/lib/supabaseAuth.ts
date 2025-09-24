@@ -23,7 +23,15 @@ const getRedirectUrl = () => {
 // Supabase client
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce'
+    }
+  }
 )
 
 // Check if environment variables are set
@@ -101,7 +109,8 @@ export const addSite = async (url: string, title?: string) => {
     return { data: null, error: { message: 'User not authenticated' } }
   }
   
-  const { data, error } = await supabase
+  // Create the site
+  const { data: site, error: siteError } = await supabase
     .from('sites')
     .insert({
       url,
@@ -110,7 +119,39 @@ export const addSite = async (url: string, title?: string) => {
     })
     .select()
     .single()
-  return { data, error }
+  
+  if (siteError) {
+    return { data: null, error: siteError }
+  }
+  
+  // Automatically create a main page entry for the site URL
+  try {
+    const urlObj = new URL(url)
+    const path = urlObj.pathname || '/'
+    
+    const { error: pageError } = await supabase
+      .from('pages')
+      .insert({
+        user_id: user.id,
+        site_id: site.id,
+        url: url,
+        title: title || null,
+        path: path,
+        is_main_page: true // This is the main page for the site
+      })
+    
+    if (pageError) {
+      console.error('Error creating main page for site:', pageError)
+      // Don't fail the entire operation, just log the error
+    } else {
+      console.log(`Created main page for site: ${url}`)
+    }
+  } catch (error) {
+    console.error('Error processing URL for main page:', error)
+    // Don't fail the entire operation, just log the error
+  }
+  
+  return { data: site, error: null }
 }
 
 export const getUserSites = async () => {
@@ -139,11 +180,60 @@ export const deleteSite = async (siteId: string) => {
     return { error: { message: 'User not authenticated' } }
   }
   
+  // First, get all pages for this site to collect their URLs
+  const { data: pages, error: pagesError } = await supabase
+    .from('pages')
+    .select('url')
+    .eq('site_id', siteId)
+    .eq('user_id', user.id)
+  
+  if (pagesError) {
+    console.error('Error fetching pages for site deletion:', pagesError)
+    return { error: pagesError }
+  }
+  
+  // Get the site URL as well (main page)
+  const { data: site, error: siteError } = await supabase
+    .from('sites')
+    .select('url')
+    .eq('id', siteId)
+    .eq('user_id', user.id)
+    .single()
+  
+  if (siteError) {
+    console.error('Error fetching site for deletion:', siteError)
+    return { error: siteError }
+  }
+  
+  // Collect all URLs that need audit usage cleanup
+  const urlsToCleanup = [site.url] // Main site URL
+  if (pages) {
+    pages.forEach(page => urlsToCleanup.push(page.url))
+  }
+  
+  // Clean up page audit usage records for all URLs
+  if (urlsToCleanup.length > 0) {
+    const { error: auditCleanupError } = await supabase
+      .from('page_audit_usage')
+      .delete()
+      .eq('user_id', user.id)
+      .in('page_url', urlsToCleanup)
+    
+    if (auditCleanupError) {
+      console.error('Error cleaning up page audit usage:', auditCleanupError)
+      // Don't fail the entire operation, just log the error
+    } else {
+      console.log(`Cleaned up page audit usage for ${urlsToCleanup.length} URLs`)
+    }
+  }
+  
+  // Delete the site (this will cascade delete pages due to foreign key constraints)
   const { error } = await supabase
     .from('sites')
     .delete()
     .eq('id', siteId)
     .eq('user_id', user.id) // Double-check ownership
+  
   return { error }
 }
 
@@ -253,6 +343,34 @@ export const deletePage = async (pageId: string) => {
     return { data: null, error: { message: 'User not authenticated' } }
   }
   
+  // First, get the page URL before deleting
+  const { data: page, error: pageError } = await supabase
+    .from('pages')
+    .select('url')
+    .eq('id', pageId)
+    .eq('user_id', user.id)
+    .single()
+  
+  if (pageError) {
+    console.error('Error fetching page for deletion:', pageError)
+    return { data: null, error: pageError }
+  }
+  
+  // Clean up page audit usage record for this URL
+  const { error: auditCleanupError } = await supabase
+    .from('page_audit_usage')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('page_url', page.url)
+  
+  if (auditCleanupError) {
+    console.error('Error cleaning up page audit usage:', auditCleanupError)
+    // Don't fail the entire operation, just log the error
+  } else {
+    console.log(`Cleaned up page audit usage for ${page.url}`)
+  }
+  
+  // Delete the page
   const { data, error } = await supabase
     .from('pages')
     .delete()

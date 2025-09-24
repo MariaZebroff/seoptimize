@@ -13,6 +13,7 @@ import ContentQualityAnalysis from './ContentQualityAnalysis'
 import AIContentGenerator from './AIContentGenerator'
 import AIKeywordResearch from './AIKeywordResearch'
 import AICompetitorAnalysis from './AICompetitorAnalysis'
+import { PlanRestrictionGuard } from './PlanRestrictionGuard'
 
 interface AuditResult {
   title: string
@@ -108,6 +109,7 @@ interface AuditResultsProps {
   loading: boolean
   error: string | null
   url?: string
+  user?: any // User object for plan restrictions
 }
 
 const ScoreCard = ({ title, score, color, description, recommendations }: { 
@@ -800,7 +802,7 @@ const BrokenLinksCard = ({ brokenLinkDetails, brokenLinkSummary }: {
   )
 }
 
-export default function AuditResults({ result, loading, error, url }: AuditResultsProps) {
+export default function AuditResults({ result, loading, error, url, user }: AuditResultsProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'performance' | 'accessibility' | 'best-practices' | 'content-quality' | 'ai-content' | 'ai-keywords' | 'ai-competitors'>('overview')
   
   // Debug logging for active tab
@@ -823,6 +825,20 @@ export default function AuditResults({ result, loading, error, url }: AuditResul
   }
 
   if (error) {
+    // Determine the appropriate title based on error type
+    const getErrorTitle = (error: string) => {
+      if (error.includes('Audit limit reached')) {
+        return 'Audit limit reached'
+      }
+      if (error.includes('Page Not Found') || error.includes('404')) {
+        return 'Page Not Found'
+      }
+      if (error.includes('Failed to audit')) {
+        return 'Audit Failed'
+      }
+      return 'Error'
+    }
+
     return (
       <div className="bg-white rounded-lg shadow p-8">
         <div className="text-center">
@@ -831,7 +847,7 @@ export default function AuditResults({ result, loading, error, url }: AuditResul
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Page Not Found</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{getErrorTitle(error)}</h3>
           <p className="text-gray-600">{error}</p>
         </div>
       </div>
@@ -1121,10 +1137,12 @@ export default function AuditResults({ result, loading, error, url }: AuditResul
                 />
               </div>
               
-              {/* Dynamic Performance Charts */}
-              {dynamicInsights?.performance && (
-                <PerformanceCharts insights={dynamicInsights.performance} />
-              )}
+              {/* Dynamic Performance Charts - Restricted for free tier */}
+              <PlanRestrictionGuard user={user} requiredFeature="historicalData">
+                {dynamicInsights?.performance && (
+                  <PerformanceCharts insights={dynamicInsights.performance} />
+                )}
+              </PlanRestrictionGuard>
               
               {/* Dynamic Performance Recommendations */}
               {dynamicInsights?.performance && (
@@ -1296,33 +1314,39 @@ export default function AuditResults({ result, loading, error, url }: AuditResul
 
 
           {activeTab === 'ai-content' && (
-            <div className="space-y-6">
-              <AIContentGenerator
-                currentTitle={result.title}
-                currentMetaDescription={result.metaDescription}
-                content={`${result.title} ${result.metaDescription} ${result.h1Tags.join(' ')}`}
-                targetKeywords={[]}
-              />
-            </div>
+            <PlanRestrictionGuard user={user} requiredFeature="aiRecommendations">
+              <div className="space-y-6">
+                <AIContentGenerator
+                  currentTitle={result.title}
+                  currentMetaDescription={result.metaDescription}
+                  content={`${result.title} ${result.metaDescription} ${result.h1Tags.join(' ')}`}
+                  targetKeywords={[]}
+                />
+              </div>
+            </PlanRestrictionGuard>
           )}
 
           {activeTab === 'ai-keywords' && (
-            <div className="space-y-6">
-              <AIKeywordResearch
-                url={result.url}
-                currentKeywords={[]}
-                industry="general"
-              />
-            </div>
+            <PlanRestrictionGuard user={user} requiredFeature="aiRecommendations">
+              <div className="space-y-6">
+                <AIKeywordResearch
+                  url={result.url}
+                  currentKeywords={[]}
+                  industry="general"
+                />
+              </div>
+            </PlanRestrictionGuard>
           )}
 
           {activeTab === 'ai-competitors' && (
-            <div className="space-y-6">
-              <AICompetitorAnalysis
-                currentUrl={result.url}
-                currentAuditData={result}
-              />
-            </div>
+            <PlanRestrictionGuard user={user} requiredFeature="competitorAnalysis">
+              <div className="space-y-6">
+                <AICompetitorAnalysis
+                  currentUrl={result.url}
+                  currentAuditData={result}
+                />
+              </div>
+            </PlanRestrictionGuard>
           )}
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { getAuditHistory, deleteAudit } from "@/lib/supabaseAuth"
 import AuditScoreChart from "./AuditScoreChart"
 import PDFReport from "./PDFReport"
+import { PlanRestrictionGuard } from "./PlanRestrictionGuard"
 
 interface AuditRecord {
   id: string
@@ -80,9 +81,10 @@ interface AuditHistoryProps {
   limit?: number
   latestAuditResult?: any
   url?: string
+  user?: any
 }
 
-export default function AuditHistory({ siteId, limit = 20, latestAuditResult, url }: AuditHistoryProps) {
+export default function AuditHistory({ siteId, limit = 20, latestAuditResult, url, user }: AuditHistoryProps) {
   const [audits, setAudits] = useState<AuditRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -362,12 +364,14 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult, ur
 
   return (
     <div className="space-y-6">
-      {/* PDF Report Section */}
-      <PDFReport 
-        auditData={audits} 
-        siteName={audits.length > 0 ? audits[0].url : undefined}
-        siteUrl={audits.length > 0 ? audits[0].url : undefined}
-      />
+      {/* PDF Report Section - Restricted to Pro+ plans */}
+      <PlanRestrictionGuard user={user} requiredFeature="exportReports">
+        <PDFReport 
+          auditData={audits} 
+          siteName={audits.length > 0 ? audits[0].url : undefined}
+          siteUrl={audits.length > 0 ? audits[0].url : undefined}
+        />
+      </PlanRestrictionGuard>
       
       {/* Charts Section */}
       <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">

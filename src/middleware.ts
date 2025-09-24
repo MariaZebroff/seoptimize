@@ -35,6 +35,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Debug: Log authentication status in middleware
+  if (request.nextUrl.pathname.startsWith('/api/audit')) {
+    console.log('Middleware: User auth status:', user ? `authenticated (${user.id})` : 'anonymous')
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:

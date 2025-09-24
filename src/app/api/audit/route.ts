@@ -2,27 +2,32 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PSIAuditService } from '@/lib/psiAuditService'
 import { HttpAuditService } from '@/lib/httpAuditService'
 import { createSupabaseServerClient, saveAuditResultServer } from '@/lib/supabaseServer'
-import { createServerClient } from '@supabase/ssr'
+import { SubscriptionService } from '@/lib/subscriptionService'
+import { SubscriptionServiceFallback } from '@/lib/subscriptionServiceFallback'
 
 // Helper function to get user from request
-async function getUserFromRequest(request: NextRequest) {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll() {
-          // No-op for API routes
-        },
-      },
-    }
-  )
-  
-  const { data: { user }, error } = await supabase.auth.getUser()
-  return { user, error }
+async function getUserFromRequest() {
+  try {
+    const supabase = await createSupabaseServerClient()
+    
+    // Debug: Check what cookies are available
+    const { cookies } = await import('next/headers')
+    const cookieStore = await cookies()
+    const allCookies = cookieStore.getAll()
+    console.log('Audit API: Available cookies:', allCookies.map(c => `${c.name}=${c.value.substring(0, 20)}...`))
+    
+    const { data: { user }, error } = await supabase.auth.getUser()
+    console.log('Audit API: Supabase auth result:', { user: user?.id, error: error?.message })
+    
+    // Debug: Check session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    console.log('Audit API: Session check:', { session: session?.user?.id, error: sessionError?.message })
+    
+    return { user, error }
+  } catch (error) {
+    console.error('Error getting user from request:', error)
+    return { user: null, error }
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -32,11 +37,13 @@ export async function POST(request: NextRequest) {
     // Parse request body with error handling
     let url: string
     let siteId: string | undefined
+    let clientUserId: string | undefined
     
     try {
       const body = await request.json()
       url = body.url
       siteId = body.siteId
+      clientUserId = body.userId // Get user ID from client
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError)
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
@@ -46,11 +53,58 @@ export async function POST(request: NextRequest) {
     console.log('Site ID received:', siteId)
     
     // Get user from request
-    const { user, error: userError } = await getUserFromRequest(request)
+    const { user, error: userError } = await getUserFromRequest()
     
     if (!url) {
       console.log('No URL provided')
       return NextResponse.json({ error: 'URL is required' }, { status: 400 })
+    }
+
+    // Use client user ID if available, otherwise fall back to server-side auth
+    const effectiveUserId = clientUserId || user?.id
+    const isAuthenticated = !!(clientUserId || user)
+    
+    console.log('Audit API: Client user ID:', clientUserId)
+    console.log('Audit API: Server user ID:', user?.id)
+    console.log('Audit API: Effective user ID:', effectiveUserId)
+    console.log('Audit API: Is authenticated:', isAuthenticated)
+
+    // Check plan restrictions for all users (authenticated and anonymous)
+    try {
+      let auditCheck
+      if (isAuthenticated && effectiveUserId) {
+        // For authenticated users, use the main subscription service with page URL
+        console.log('Audit API: Using main SubscriptionService for user:', effectiveUserId, 'with URL:', url)
+        auditCheck = await SubscriptionService.canUserPerformAudit(effectiveUserId, url)
+        console.log('Authenticated user audit check:', auditCheck)
+      } else {
+        // For unauthenticated users, use the fallback service
+        console.log('Audit API: Using fallback SubscriptionServiceFallback for anonymous user')
+        auditCheck = await SubscriptionServiceFallback.canUserPerformAudit('anonymous-user')
+        console.log('Anonymous user audit check:', auditCheck)
+      }
+      
+      if (!auditCheck.canPerform) {
+        console.log('User audit limit reached:', auditCheck.reason)
+        return NextResponse.json({ 
+          error: 'Audit limit reached',
+          message: auditCheck.reason,
+          remainingAudits: auditCheck.remainingAudits
+        }, { status: 403 })
+      }
+      console.log('User can perform audit, remaining audits:', auditCheck.remainingAudits)
+    } catch (error) {
+      console.error('Error checking audit limits:', error)
+      // Only continue with audit if it's a database access error, not a limit enforcement error
+      if (error instanceof Error && error.message.includes('table') || error instanceof Error && error.message.includes('database')) {
+        console.log('Database error detected, continuing with audit')
+      } else {
+        console.log('Subscription service error, blocking audit for safety')
+        return NextResponse.json({ 
+          error: 'Unable to verify audit limits',
+          message: 'Please try again later or contact support if the issue persists.'
+        }, { status: 500 })
+      }
     }
 
     // Validate URL format
@@ -81,6 +135,21 @@ export async function POST(request: NextRequest) {
             console.error('Failed to save audit result:', saveError)
           } else {
             console.log('Audit result saved to database:', savedAudit?.id)
+            
+            // Record audit usage for all users
+            try {
+              if (isAuthenticated && effectiveUserId) {
+                await SubscriptionService.recordAuditUsage(effectiveUserId, url)
+                console.log('Audit usage recorded for authenticated user:', effectiveUserId, 'for URL:', url)
+              } else {
+                // For unauthenticated users, use a shared identifier
+                const fallbackUserId = 'anonymous-user'
+                await SubscriptionServiceFallback.recordAuditUsage(fallbackUserId)
+                console.log('Audit usage recorded for unauthenticated user:', fallbackUserId)
+              }
+            } catch (usageError) {
+              console.error('Failed to record audit usage:', usageError)
+            }
           }
         } catch (saveError) {
           console.error('Error saving audit result:', saveError)
@@ -106,7 +175,8 @@ export async function POST(request: NextRequest) {
         
         // Save failed audit result to database
         try {
-          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, user?.id)
+          const userIdForSave = effectiveUserId || 'anonymous-user'
+          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, userIdForSave)
           if (saveError) {
             console.error('Failed to save failed audit result:', saveError)
           } else {
@@ -127,11 +197,28 @@ export async function POST(request: NextRequest) {
 
       // Save successful HTTP audit result to database
       try {
-        const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, user?.id)
+        // Use consistent user ID for anonymous users
+        const userIdForSave = effectiveUserId || 'anonymous-user'
+        const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, userIdForSave)
         if (saveError) {
           console.error('Failed to save HTTP audit result:', saveError)
         } else {
           console.log('HTTP audit result saved to database:', savedAudit?.id)
+          
+          // Record audit usage for all users
+          try {
+            if (isAuthenticated && effectiveUserId) {
+              await SubscriptionService.recordAuditUsage(effectiveUserId, url)
+              console.log('Audit usage recorded for authenticated user:', effectiveUserId, 'for URL:', url)
+            } else {
+              // For unauthenticated users, use a shared identifier
+              const fallbackUserId = 'anonymous-user'
+              await SubscriptionServiceFallback.recordAuditUsage(fallbackUserId)
+              console.log('Audit usage recorded for unauthenticated user:', fallbackUserId)
+            }
+          } catch (usageError) {
+            console.error('Failed to record audit usage:', usageError)
+          }
         }
       } catch (saveError) {
         console.error('Error saving HTTP audit result:', saveError)
@@ -183,7 +270,8 @@ export async function POST(request: NextRequest) {
       
       // Save error result to database
       try {
-        const { data: savedAudit, error: saveError } = await saveAuditResultServer(errorResult, siteId, user?.id)
+        const userIdForSave = effectiveUserId || 'anonymous-user'
+        const { data: savedAudit, error: saveError } = await saveAuditResultServer(errorResult, siteId, userIdForSave)
         if (saveError) {
           console.error('Failed to save error audit result:', saveError)
         } else {
