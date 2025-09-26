@@ -11,45 +11,45 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔔 Stripe webhook received')
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
 
+    console.log('Webhook body length:', body.length)
+    console.log('Webhook signature:', signature ? 'present' : 'missing')
+
     let event: Stripe.Event
 
-    // For development/testing, skip signature verification if webhook secret is not set
+    // SECURITY: Always require webhook signature verification
     if (!STRIPE_CONFIG.webhookSecret) {
-      console.log('⚠️  Webhook secret not set - skipping signature verification (development mode)')
-      try {
-        event = JSON.parse(body)
-      } catch (err) {
-        console.error('Failed to parse webhook body:', err)
-        return NextResponse.json(
-          { error: 'Invalid JSON body' },
-          { status: 400 }
-        )
-      }
-    } else {
-      // Production mode with signature verification
-      if (!signature) {
-        return NextResponse.json(
-          { error: 'Missing stripe-signature header' },
-          { status: 400 }
-        )
-      }
+      console.error('❌ STRIPE_WEBHOOK_SECRET not configured - webhook security disabled')
+      return NextResponse.json(
+        { error: 'Webhook secret not configured' },
+        { status: 500 }
+      )
+    }
 
-      try {
-        event = stripe.webhooks.constructEvent(
-          body,
-          signature,
-          STRIPE_CONFIG.webhookSecret
-        )
-      } catch (err) {
-        console.error('Webhook signature verification failed:', err)
-        return NextResponse.json(
-          { error: 'Invalid signature' },
-          { status: 400 }
-        )
-      }
+    if (!signature) {
+      console.error('❌ Missing stripe-signature header')
+      return NextResponse.json(
+        { error: 'Missing signature header' },
+        { status: 400 }
+      )
+    }
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        body,
+        signature,
+        STRIPE_CONFIG.webhookSecret
+      )
+      console.log('✅ Webhook signature verified:', event.type, event.id)
+    } catch (err) {
+      console.error('❌ Webhook signature verification failed:', err)
+      return NextResponse.json(
+        { error: 'Invalid signature' },
+        { status: 400 }
+      )
     }
 
     // Handle the event
@@ -116,8 +116,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Webhook error:', error)
+    
+    // Don't expose internal error details
     return NextResponse.json(
-      { error: 'Webhook handler failed' },
+      { error: 'Webhook processing failed' },
       { status: 500 }
     )
   }
@@ -147,21 +149,16 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       return { success: false, error: 'No user ID in payment metadata' }
     }
 
-    // Create or update user subscription
+    // Create or update user subscription (using only existing columns)
+    const now = new Date()
+    const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+    
     const subscriptionData = {
       user_id: userId,
       plan_id: plan,
-      plan_name: planName,
       status: 'active',
-      stripe_customer_id: `customer_${userId}`,
-      stripe_subscription_id: `sub_${paymentIntent.id}`,
-      stripe_payment_intent_id: paymentIntent.id,
-      amount_paid: paymentIntent.amount / 100, // Convert from cents
-      currency: paymentIntent.currency,
-      current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      current_period_start: now.toISOString(),
+      current_period_end: periodEnd.toISOString()
     }
 
     console.log('Subscription data to insert/update:', subscriptionData)
@@ -186,15 +183,9 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         .from('user_subscriptions')
         .update({
           plan_id: plan,
-          plan_name: planName,
-          stripe_customer_id: `customer_${userId}`,
-          stripe_subscription_id: `sub_${paymentIntent.id}`,
-          stripe_payment_intent_id: paymentIntent.id,
-          amount_paid: paymentIntent.amount / 100,
-          currency: paymentIntent.currency,
-          current_period_start: new Date().toISOString(),
-          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date().toISOString()
+          status: 'active',
+          current_period_start: now.toISOString(),
+          current_period_end: periodEnd.toISOString()
         })
         .eq('id', existingSubscription.id)
         .select()
@@ -262,8 +253,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     id: subscription.id,
     customer: subscription.customer,
     status: subscription.status,
-    current_period_start: subscription.current_period_start,
-    current_period_end: subscription.current_period_end,
+    current_period_start: (subscription as any).current_period_start,
+    current_period_end: (subscription as any).current_period_end,
   })
 
   // TODO: Implement your business logic here
@@ -276,8 +267,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('Processing subscription update:', {
     id: subscription.id,
     status: subscription.status,
-    current_period_start: subscription.current_period_start,
-    current_period_end: subscription.current_period_end,
+    current_period_start: (subscription as any).current_period_start,
+    current_period_end: (subscription as any).current_period_end,
   })
 
   // TODO: Implement your business logic here

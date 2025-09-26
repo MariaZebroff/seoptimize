@@ -86,6 +86,35 @@ const PaymentFormComponent: React.FC<PaymentFormProps> = ({
             timestamp: Date.now()
           }))
           console.log('Payment stored in localStorage for immediate plan upgrade')
+          
+          // Create subscription in database
+          try {
+            const subscriptionData = {
+              userId: metadata.userId,
+              planId: metadata.plan,
+              planName: metadata.planName,
+              amount: amount
+            }
+            
+            console.log('PaymentForm: Sending subscription data:', subscriptionData)
+            
+            const subscriptionResponse = await fetch('/api/payment/create-subscription', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(subscriptionData)
+            })
+            
+            const subscriptionResult = await subscriptionResponse.json()
+            if (subscriptionResult.success) {
+              console.log('✅ Subscription created successfully:', subscriptionResult.subscription)
+            } else {
+              console.error('❌ Subscription creation failed:', subscriptionResult.error)
+            }
+          } catch (subscriptionError) {
+            console.error('Error creating subscription:', subscriptionError)
+          }
         }
         
         onSuccess?.(paymentIntent)

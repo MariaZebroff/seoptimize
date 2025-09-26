@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe, validateStripeConfig } from '@/lib/stripe'
+import { paymentRateLimiter, getClientIdentifier, createRateLimitResponse } from '@/lib/rateLimiter'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting for payment requests
+    const clientId = getClientIdentifier(request)
+    const rateLimit = paymentRateLimiter.isAllowed(clientId)
+    
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for client: ${clientId}`)
+      return createRateLimitResponse(rateLimit.remaining, rateLimit.resetTime)
+    }
+
     // Validate Stripe configuration
     validateStripeConfig()
 
@@ -40,8 +50,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating payment intent:', error)
+    
+    // Don't expose internal error details to client
     return NextResponse.json(
-      { error: 'Failed to create payment intent' },
+      { 
+        error: 'Payment processing temporarily unavailable',
+        message: 'Please try again in a few moments'
+      },
       { status: 500 }
     )
   }

@@ -34,6 +34,12 @@ export async function POST(request: NextRequest) {
   try {
     console.log('Audit API called')
     
+    // Check if request was aborted
+    if (request.signal?.aborted) {
+      console.log('Audit request was aborted before processing')
+      return NextResponse.json({ error: 'Request aborted' }, { status: 499 })
+    }
+    
     // Parse request body with error handling
     let url: string
     let siteId: string | undefined
@@ -73,9 +79,9 @@ export async function POST(request: NextRequest) {
     try {
       let auditCheck
       if (isAuthenticated && effectiveUserId) {
-        // For authenticated users, be more lenient - allow audits and let client-side handle limits
-        console.log('Audit API: Authenticated user detected, allowing audit (limits handled client-side)')
-        auditCheck = { canPerform: true, remainingAudits: -1 }
+        // For authenticated users, check actual limits
+        console.log('Audit API: Checking limits for authenticated user:', effectiveUserId)
+        auditCheck = await SubscriptionService.canUserPerformAudit(effectiveUserId, url)
         console.log('Authenticated user audit check:', auditCheck)
       } else {
         // For unauthenticated users, use the fallback service
@@ -118,6 +124,12 @@ export async function POST(request: NextRequest) {
 
     console.log('Starting PSI audit service with enhanced error handling')
     
+    // Check if request was aborted before starting audit
+    if (request.signal?.aborted) {
+      console.log('Audit request was aborted before starting PSI audit')
+      return NextResponse.json({ error: 'Request aborted' }, { status: 499 })
+    }
+    
     // Try PSI audit first with better error handling
     let auditResult
     try {
@@ -130,7 +142,7 @@ export async function POST(request: NextRequest) {
         
         // Save audit result to database with error handling
         try {
-          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, user?.id)
+          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, effectiveUserId)
           if (saveError) {
             console.error('Failed to save audit result:', saveError)
           } else {
@@ -161,6 +173,12 @@ export async function POST(request: NextRequest) {
       }
     } catch (psiError) {
       console.log('PSI audit failed with exception:', psiError instanceof Error ? psiError.message : 'Unknown error')
+    }
+
+    // Check if request was aborted before HTTP fallback
+    if (request.signal?.aborted) {
+      console.log('Audit request was aborted before HTTP fallback')
+      return NextResponse.json({ error: 'Request aborted' }, { status: 499 })
     }
 
     // Fallback to HTTP audit with enhanced error handling
@@ -281,6 +299,12 @@ export async function POST(request: NextRequest) {
         console.error('Error saving error audit result:', saveError)
       }
       
+      // Check if request was aborted before returning error
+      if (request.signal?.aborted) {
+        console.log('Audit request was aborted before returning error result')
+        return NextResponse.json({ error: 'Request aborted' }, { status: 499 })
+      }
+      
       return NextResponse.json(
         { 
           error: 'Failed to audit website. Both PSI and HTTP methods failed.',
@@ -293,6 +317,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Audit API error:', error)
+    
+    // Check if request was aborted before returning error
+    if (request.signal?.aborted) {
+      console.log('Audit request was aborted during error handling')
+      return NextResponse.json({ error: 'Request aborted' }, { status: 499 })
+    }
+    
     return NextResponse.json(
       { error: 'Failed to audit website. Please check the URL and try again.' },
       { status: 500 }

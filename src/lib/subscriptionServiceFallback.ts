@@ -60,10 +60,16 @@ const resetAnonymousAuditCount = () => {
 export class SubscriptionServiceFallback {
   // Get user's current plan
   static async getUserPlan(userId: string): Promise<Plan> {
-    // For testing: return Basic Plan for all users (including anonymous)
-    // This ensures the audit limits work properly during testing
+    // For anonymous users, return Free Plan with 3-minute limits
+    if (userId === 'anonymous-user') {
+      const freePlan = getDefaultPlan()
+      console.log('Fallback: Returning Free Plan for anonymous user:', userId)
+      return freePlan
+    }
+    
+    // For authenticated users, return Basic Plan for testing
     const basicPlan = getPlanById('basic')!
-    console.log('Fallback: Returning Basic Plan for user (testing mode):', userId)
+    console.log('Fallback: Returning Basic Plan for authenticated user (testing mode):', userId)
     return basicPlan
   }
 
@@ -213,13 +219,19 @@ export class SubscriptionServiceFallback {
     let remainingAudits: number
     let reason: string | undefined
 
-    if (threeDayLimit !== undefined && plan.id === 'free') {
-      // Use 3-day limits for free users
-      canPerform = threeDayLimit === -1 || usage.audits_used < threeDayLimit
-      remainingAudits = threeDayLimit === -1 ? -1 : Math.max(0, threeDayLimit - usage.audits_used)
+    if (threeDayLimit !== undefined && threeDayLimit > 0) {
+      // Use 3-day limits for Free Tier
+      console.log('Fallback: Checking 3-day limits for user:', userId, 'threeDayLimit:', threeDayLimit)
+      const threeDayUsage = await this.getUser3DayUsage(userId)
+      console.log('Fallback: Current 3-day usage:', threeDayUsage)
+      canPerform = threeDayLimit === -1 || threeDayUsage < threeDayLimit
+      remainingAudits = threeDayLimit === -1 ? -1 : Math.max(0, threeDayLimit - threeDayUsage)
+      
+      console.log('Fallback: Can perform audit (3-day):', canPerform, 'remainingAudits:', remainingAudits)
       
       if (!canPerform) {
-        reason = 'You have reached your limit of 1 audit every 3 days. Upgrade to Basic plan for 2 audits per day.'
+        reason = `You have reached your limit of ${threeDayLimit} audit every 3 minutes. Please wait before running another audit.`
+        console.log('Fallback: Blocking audit (3-day), reason:', reason)
       }
     } else if (dailyLimit !== undefined && dailyLimit > 0) {
       // Use daily limits
@@ -282,6 +294,33 @@ export class SubscriptionServiceFallback {
   static async recordAIUsage(userId: string): Promise<void> {
     console.log('Fallback: Recording AI usage for user:', userId)
     // No-op for now
+  }
+
+  // Get user's 3-minute usage (for 3-minute limits - testing)
+  static async getUser3DayUsage(userId: string): Promise<number> {
+    try {
+      const threeMinutesAgo = new Date()
+      threeMinutesAgo.setMinutes(threeMinutesAgo.getMinutes() - 3)
+      
+      // Count audits from the last 3 minutes from database
+      const { data, error } = await supabase
+        .from('audits')
+        .select('id')
+        .eq('user_id', userId)
+        .gte('created_at', threeMinutesAgo.toISOString())
+
+      if (error) {
+        console.error('Error fetching 3-minute usage (fallback):', error)
+        return 0
+      }
+
+      const count = data?.length || 0
+      console.log('Fallback: 3-minute usage for user:', userId, 'count:', count)
+      return count
+    } catch (error) {
+      console.error('Error in getUser3DayUsage (fallback):', error)
+      return 0
+    }
   }
 
   // Helper method to get 3-day period identifier

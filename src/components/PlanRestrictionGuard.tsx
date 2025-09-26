@@ -32,63 +32,34 @@ export const PlanRestrictionGuard: React.FC<PlanRestrictionGuardProps> = ({
           setUserPlan(freePlan)
           setHasAccess(requiredFeature ? freePlan.limits[requiredFeature] === true : true)
         } else {
-          // Check localStorage for recent Pro Plan payment first
+          // Use SubscriptionClient which handles localStorage and database fallback
           try {
-            const paymentData = localStorage.getItem('pro_plan_payment')
-            if (paymentData) {
-              const payment = JSON.parse(paymentData)
-              // Check if payment is for this user and recent (within last 24 hours)
-              if (payment.userId === user.id && 
-                  payment.planId === 'pro' && 
-                  (Date.now() - payment.timestamp) < 24 * 60 * 60 * 1000) {
-                console.log('PlanRestrictionGuard: Found recent Pro Plan payment for user:', user.id)
-                const proPlan = getPlanById('pro')!
-                setUserPlan(proPlan)
-                
-                if (requiredFeature) {
-                  const hasFeatureAccess = proPlan.limits[requiredFeature] === true
-                  setHasAccess(hasFeatureAccess)
-                  console.log('PlanRestrictionGuard: Pro Plan feature access for', requiredFeature, ':', proPlan.limits[requiredFeature], 'hasAccess:', hasFeatureAccess)
-                } else {
-                  setHasAccess(true)
-                }
-                return
-              }
+            const { SubscriptionClient } = await import('@/lib/subscriptionClient')
+            const plan = await SubscriptionClient.getUserPlan()
+            setUserPlan(plan)
+            console.log('PlanRestrictionGuard: Loaded user plan:', plan.name)
+            
+            if (requiredFeature) {
+              const hasFeatureAccess = plan.limits[requiredFeature] === true
+              setHasAccess(hasFeatureAccess)
+              console.log('PlanRestrictionGuard: Feature access for', requiredFeature, ':', plan.limits[requiredFeature], 'hasAccess:', hasFeatureAccess)
+            } else {
+              setHasAccess(true)
             }
           } catch (error) {
-            console.error('Error checking localStorage payment:', error)
-          }
+            console.error('Error loading user plan:', error)
+            // Fallback to Free Plan for authenticated users
+            const freePlan = getPlanById('free')!
+            setUserPlan(freePlan)
+            console.log('PlanRestrictionGuard: Using Free Plan for authenticated user:', user.id)
 
-          // Use proper subscription API to get user's actual plan
-          const response = await fetch('/api/subscription/plan')
-          if (response.ok) {
-            const data = await response.json()
-            if (data.plan) {
-              setUserPlan(data.plan)
-              console.log('PlanRestrictionGuard: Loaded user plan:', data.plan.name)
-              
-              if (requiredFeature) {
-                const hasFeatureAccess = data.plan.limits[requiredFeature] === true
-                setHasAccess(hasFeatureAccess)
-                console.log('PlanRestrictionGuard: Feature access for', requiredFeature, ':', data.plan.limits[requiredFeature], 'hasAccess:', hasFeatureAccess)
-              } else {
-                setHasAccess(true)
-              }
-              return
+            if (requiredFeature) {
+              const hasFeatureAccess = freePlan.limits[requiredFeature] === true
+              setHasAccess(hasFeatureAccess)
+              console.log('PlanRestrictionGuard: Feature access for', requiredFeature, ':', freePlan.limits[requiredFeature], 'hasAccess:', hasFeatureAccess)
+            } else {
+              setHasAccess(true)
             }
-          }
-
-          // Fallback to Basic Plan for authenticated users
-          const basicPlan = getPlanById('basic')!
-          setUserPlan(basicPlan)
-          console.log('PlanRestrictionGuard: Using Basic Plan for authenticated user:', user.id)
-
-          if (requiredFeature) {
-            const hasFeatureAccess = basicPlan.limits[requiredFeature] === true
-            setHasAccess(hasFeatureAccess)
-            console.log('PlanRestrictionGuard: Feature access for', requiredFeature, ':', basicPlan.limits[requiredFeature], 'hasAccess:', hasFeatureAccess)
-          } else {
-            setHasAccess(true)
           }
         }
       } catch (error) {
@@ -118,10 +89,10 @@ export const PlanRestrictionGuard: React.FC<PlanRestrictionGuardProps> = ({
             console.error('Error checking localStorage payment in fallback:', error)
           }
 
-          // For authenticated users, use Basic Plan for testing
-          const basicPlan = getPlanById('basic')!
-          setUserPlan(basicPlan)
-          setHasAccess(requiredFeature ? basicPlan.limits[requiredFeature] === true : true)
+          // For authenticated users, use Free Plan
+          const freePlan = getPlanById('free')!
+          setUserPlan(freePlan)
+          setHasAccess(requiredFeature ? freePlan.limits[requiredFeature] === true : true)
         }
       } finally {
         setLoading(false)
@@ -272,11 +243,11 @@ export const AuditLimitGuard: React.FC<AuditLimitGuardProps> = ({
             }
           }
 
-          // Fallback to Basic Plan for authenticated users
-          console.log('AuditLimitGuard: Using Basic Plan for authenticated user')
-          const basicPlan = getPlanById('basic')!
+          // Fallback to Free Plan for authenticated users
+          console.log('AuditLimitGuard: Using Free Plan for authenticated user')
+          const freePlan = getPlanById('free')!
           setCanPerformAudit(true) // Allow audits (limits enforced by API)
-          setRemainingAudits(basicPlan.limits.auditsPerMonth)
+          setRemainingAudits(freePlan.limits.auditsPerMonth)
           setReason(undefined)
         }
       } catch (error) {
@@ -304,9 +275,9 @@ export const AuditLimitGuard: React.FC<AuditLimitGuardProps> = ({
         }
         
         // Fallback to allowing audits
-        const basicPlan = getPlanById('basic')!
+        const freePlan = getPlanById('free')!
         setCanPerformAudit(true)
-        setRemainingAudits(basicPlan.limits.auditsPerMonth)
+        setRemainingAudits(freePlan.limits.auditsPerMonth)
         setReason(undefined)
       } finally {
         setLoading(false)

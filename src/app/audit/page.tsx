@@ -2,7 +2,7 @@
 
 
 
-import { useState, useEffect, useCallback, Suspense } from "react"
+import { useState, useEffect, useCallback, Suspense, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getCurrentUser, getUserSites } from "@/lib/supabaseAuth"
 import AuditResults from "@/components/AuditResults"
@@ -35,52 +35,18 @@ function AuditPageContent() {
   const [planLoading, setPlanLoading] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
+  
+  // Ref to store AbortController for canceling ongoing audits
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Load user plan
   const loadUserPlan = useCallback(async () => {
     try {
       if (user) {
-        // Check localStorage for recent Pro Plan payment first
-        try {
-          const paymentData = localStorage.getItem('pro_plan_payment')
-          if (paymentData) {
-            const payment = JSON.parse(paymentData)
-            // Check if payment is for this user and recent (within last 24 hours)
-            if (payment.userId === user.id && 
-                payment.planId === 'pro' && 
-                (Date.now() - payment.timestamp) < 24 * 60 * 60 * 1000) {
-              console.log('Audit page: Found recent Pro Plan payment for user:', user.id)
-              const { getPlanById } = await import('@/lib/plans')
-              const proPlan = getPlanById('pro')!
-              setUserPlan(proPlan)
-              return
-            }
-          }
-        } catch (error) {
-          console.error('Error checking localStorage payment:', error)
-        }
-
-        // Use proper subscription API to get user's actual plan
-        const response = await fetch('/api/subscription/plan')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.plan) {
-            setUserPlan(data.plan)
-            console.log('Audit page: Loaded user plan:', data.plan.name)
-          } else {
-            // No subscription found, use basic plan for authenticated users
-            const { getPlanById } = await import('@/lib/plans')
-            const basicPlan = getPlanById('basic')!
-            setUserPlan(basicPlan)
-            console.log('Audit page: No subscription found, using basic plan')
-          }
-        } else {
-          // API error, fallback to basic plan
-          const { getPlanById } = await import('@/lib/plans')
-          const basicPlan = getPlanById('basic')!
-          setUserPlan(basicPlan)
-          console.log('Audit page: API error, using basic plan')
-        }
+        // Use SubscriptionClient which handles localStorage and database fallback
+        const plan = await SubscriptionClient.getUserPlan()
+        setUserPlan(plan)
+        console.log('Audit page: Loaded user plan:', plan.name)
       } else {
         // For unauthenticated users, use free plan
         const { getPlanById } = await import('@/lib/plans')
@@ -90,10 +56,10 @@ function AuditPageContent() {
       }
     } catch (error) {
       console.error('Error loading user plan:', error)
-      // Fallback to Basic Plan for testing
+      // Fallback to Free Plan
       const { getPlanById } = await import('@/lib/plans')
-      const basicPlan = getPlanById('basic')!
-      setUserPlan(basicPlan)
+      const freePlan = getPlanById('free')!
+      setUserPlan(freePlan)
     } finally {
       setPlanLoading(false)
     }
@@ -139,9 +105,45 @@ function AuditPageContent() {
     }
   }, [url, sites])
 
+  // Handle beforeunload warning when audit is in progress
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isAuditing) {
+        e.preventDefault()
+        e.returnValue = 'An audit is currently in progress. Are you sure you want to leave?'
+        return 'An audit is currently in progress. Are you sure you want to leave?'
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [isAuditing])
+
+  // Cleanup function to cancel ongoing audits when component unmounts
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        console.log('Component unmounting, canceling ongoing audit...')
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
+
   const runAudit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!url.trim()) return
+
+    // Cancel any existing audit
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    // Create new AbortController for this audit
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
 
     setIsAuditing(true)
     setError(null)
@@ -155,6 +157,7 @@ function AuditPageContent() {
           'Cache-Control': 'no-cache',
         },
         credentials: 'include',
+        signal: abortController.signal, // Add abort signal
         body: JSON.stringify({ 
           url: url.trim(), 
           siteId,
@@ -162,6 +165,12 @@ function AuditPageContent() {
           timestamp: Date.now() // Cache busting
         }),
       })
+
+      // Check if the request was aborted
+      if (abortController.signal.aborted) {
+        console.log('Audit request was aborted')
+        return
+      }
 
       const data = await response.json()
 
@@ -179,9 +188,18 @@ function AuditPageContent() {
 
       setAuditResult(data)
     } catch (err) {
+      // Don't show error if the request was aborted
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Audit was cancelled by user')
+        return
+      }
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setIsAuditing(false)
+      // Clear the abort controller reference
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null
+      }
     }
   }
 
@@ -205,12 +223,20 @@ function AuditPageContent() {
             </div>
             <div className="flex items-center space-x-4">
               {user ? (
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  ← Back to Dashboard
-                </button>
+                <>
+                  <button
+                    onClick={() => router.push("/account")}
+                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Account
+                  </button>
+                  <button
+                    onClick={() => router.push("/dashboard")}
+                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    ← Back to Dashboard
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={() => router.push("/")}
@@ -277,7 +303,9 @@ function AuditPageContent() {
                     <p className="text-gray-500">Loading...</p>
                   ) : userPlan ? (
                     <p className="text-gray-900">
-                      {userPlan.limits.auditsPerDay !== undefined 
+                      {userPlan.limits.auditsPer3Days !== undefined 
+                        ? (userPlan.limits.auditsPer3Days === -1 ? 'Unlimited' : userPlan.limits.auditsPer3Days) + ' audit every 3 minutes (testing)'
+                        : userPlan.limits.auditsPerDay !== undefined 
                         ? (userPlan.limits.auditsPerDay === -1 ? 'Unlimited' : userPlan.limits.auditsPerDay) + ' audits/day'
                         : (userPlan.limits.auditsPerMonth === -1 ? 'Unlimited' : userPlan.limits.auditsPerMonth) + ' audits/month'
                       }
@@ -311,7 +339,22 @@ function AuditPageContent() {
                 <div>
                   {url}
                 </div>
-                <div className="flex justify-end">
+                <div className="flex justify-end space-x-3">
+                  {isAuditing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (abortControllerRef.current) {
+                          abortControllerRef.current.abort()
+                          setIsAuditing(false)
+                          setError(null)
+                        }
+                      }}
+                      className="px-6 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors"
+                    >
+                      Cancel Audit
+                    </button>
+                  )}
                   <button
                     type="submit"
                     disabled={isAuditing || !url.trim()}

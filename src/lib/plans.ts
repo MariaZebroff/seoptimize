@@ -33,7 +33,7 @@ export const PLANS: Plan[] = [
     description: 'Perfect for getting started with basic SEO analysis',
     features: [
       '1 page audit every 3 days',
-      '1 site with up to 5 pages',
+      '1 site with up to 1 page',
       'Basic SEO metrics',
       'Performance analysis',
       'Accessibility checks',
@@ -42,9 +42,9 @@ export const PLANS: Plan[] = [
     limits: {
       auditsPerMonth: 1,
       auditsPerDay: 0,  // 0 audits per day (will use 3-day tracking)
-      auditsPer3Days: 1, // 1 audit every 3 days for free users
+      auditsPer3Days: 1, // Note: Testing with 3-minute enforcement // 1 audit every 3 days for free users
       maxSites: 1,      // 1 site for free users
-      maxPagesPerSite: 5, // 5 pages per site (1 main page + 4 subpages)
+      maxPagesPerSite: 1, // 1 page per site (main page only)
       aiRecommendations: false,
       competitorAnalysis: false,
       historicalData: false,
@@ -62,7 +62,7 @@ export const PLANS: Plan[] = [
     description: 'Perfect for small websites and personal projects',
     features: [
       '2 audits per page per day',
-      '1 site with up to 5 pages',
+      '1 site with up to 3 pages',
       'Basic SEO analysis',
       'Performance metrics',
       'Accessibility checks',
@@ -74,7 +74,7 @@ export const PLANS: Plan[] = [
       auditsPerDay: 2,   // New daily limit
       auditsPer3Days: undefined, // Not used for Basic plan
       maxSites: 1,       // 1 site for basic users
-      maxPagesPerSite: 5, // 5 pages per site (1 main page + 4 subpages)
+      maxPagesPerSite: 3, // 3 pages per site (1 main page + 2 subpages)
       aiRecommendations: false,
       competitorAnalysis: false,
       historicalData: true,

@@ -68,44 +68,10 @@ export default function Dashboard() {
   const loadUserPlan = useCallback(async () => {
     try {
       if (user) {
-        // Check localStorage for recent Pro Plan payment first
-        try {
-          const paymentData = localStorage.getItem('pro_plan_payment')
-          if (paymentData) {
-            const payment = JSON.parse(paymentData)
-            // Check if payment is for this user and recent (within last 24 hours)
-            if (payment.userId === user.id && 
-                payment.planId === 'pro' && 
-                (Date.now() - payment.timestamp) < 24 * 60 * 60 * 1000) {
-              console.log('Found recent Pro Plan payment for user:', user.id)
-              const proPlan = getPlanById('pro')!
-              setUserPlan(proPlan)
-              return
-            }
-          }
-        } catch (error) {
-          console.error('Error checking localStorage payment:', error)
-        }
-
-        // Use proper subscription API to get user's actual plan
-        const response = await fetch('/api/subscription/plan')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.plan) {
-            setUserPlan(data.plan)
-            console.log('Loaded user plan:', data.plan.name)
-          } else {
-            // No subscription found, use free plan
-            const freePlan = getPlanById('free')!
-            setUserPlan(freePlan)
-            console.log('No subscription found, using free plan')
-          }
-        } else {
-          // API error, fallback to free plan
-          const freePlan = getPlanById('free')!
-          setUserPlan(freePlan)
-          console.log('API error, using free plan')
-        }
+        // Use SubscriptionClient which handles localStorage and database fallback
+        const plan = await SubscriptionClient.getUserPlan()
+        setUserPlan(plan)
+        console.log('Dashboard: Loaded user plan:', plan.name)
       } else {
         // For unauthenticated users, use free plan
         const freePlan = getPlanById('free')!
@@ -605,6 +571,12 @@ export default function Dashboard() {
                 className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
               >
                 Page Audit
+              </button>
+              <button
+                onClick={() => router.push("/account")}
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Account
               </button>
             </div>
             <div className="flex items-center space-x-4">

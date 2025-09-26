@@ -59,3 +59,5 @@ SELECT 'sites' as table_name, COUNT(*) as row_count FROM public.sites
 UNION ALL
 SELECT 'auth.users' as table_name, COUNT(*) as row_count FROM auth.users;
 
+
+

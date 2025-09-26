@@ -264,38 +264,44 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult, ur
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* PDF Report Loading */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Download PDF Report</h3>
-          <div className="animate-pulse">
-            <div className="h-20 bg-gray-200 rounded"></div>
-          </div>
-        </div>
-        
-        {/* Charts Loading */}
-        <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
+        {/* PDF Report Loading - Restricted to Pro+ plans */}
+        <PlanRestrictionGuard user={user} requiredFeature="exportReports">
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
-            <div className="h-80 animate-pulse">
-              <div className="h-full bg-gray-200 rounded"></div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Download PDF Report</h3>
+            <div className="animate-pulse">
+              <div className="h-20 bg-gray-200 rounded"></div>
             </div>
           </div>
-        </div>
+        </PlanRestrictionGuard>
         
-        {/* History Loading */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
-          <div className="animate-pulse">
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="border rounded-lg p-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ))}
+        {/* Charts Loading - Restricted to Basic+ plans */}
+        <PlanRestrictionGuard user={user} requiredFeature="historicalData">
+          <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
+              <div className="h-80 animate-pulse">
+                <div className="h-full bg-gray-200 rounded"></div>
+              </div>
             </div>
           </div>
-        </div>
+        </PlanRestrictionGuard>
+        
+        {/* History Loading - Restricted to Basic+ plans */}
+        <PlanRestrictionGuard user={user} requiredFeature="historicalData">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
+            <div className="animate-pulse">
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="border rounded-lg p-4">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </PlanRestrictionGuard>
       </div>
     )
   }
@@ -303,29 +309,35 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult, ur
   if (error) {
     return (
       <div className="space-y-6">
-        {/* PDF Report Error */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Download PDF Report</h3>
-          <div className="text-center text-gray-500 py-8">
-            Unable to load report data
-          </div>
-        </div>
-        
-        {/* Charts Error */}
-        <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
+        {/* PDF Report Error - Restricted to Pro+ plans */}
+        <PlanRestrictionGuard user={user} requiredFeature="exportReports">
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Download PDF Report</h3>
             <div className="text-center text-gray-500 py-8">
-              Unable to load chart data
+              Unable to load report data
             </div>
           </div>
-        </div>
+        </PlanRestrictionGuard>
         
-        {/* History Error */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
-          <div className="text-red-600">{error}</div>
-        </div>
+        {/* Charts Error - Restricted to Basic+ plans */}
+        <PlanRestrictionGuard user={user} requiredFeature="historicalData">
+          <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
+              <div className="text-center text-gray-500 py-8">
+                Unable to load chart data
+              </div>
+            </div>
+          </div>
+        </PlanRestrictionGuard>
+        
+        {/* History Error - Restricted to Basic+ plans */}
+        <PlanRestrictionGuard user={user} requiredFeature="historicalData">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
+            <div className="text-red-600">{error}</div>
+          </div>
+        </PlanRestrictionGuard>
       </div>
     )
   }
@@ -333,31 +345,37 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult, ur
   if (audits.length === 0) {
     return (
       <div className="space-y-6">
-        {/* PDF Report Empty State */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Download PDF Report</h3>
-          <div className="text-center text-gray-500 py-8">
-            No audit data available for report generation
-          </div>
-        </div>
-        
-        {/* Charts Empty State */}
-        <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
+        {/* PDF Report Empty State - Restricted to Pro+ plans */}
+        <PlanRestrictionGuard user={user} requiredFeature="exportReports">
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Download PDF Report</h3>
             <div className="text-center text-gray-500 py-8">
-              No audit data available for charting
+              No audit data available for report generation
             </div>
           </div>
-        </div>
+        </PlanRestrictionGuard>
         
-        {/* History Empty State */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
-          <div className="text-gray-500 text-center py-8">
-            No audit history found. Run your first audit to see results here.
+        {/* Charts Empty State - Restricted to Basic+ plans */}
+        <PlanRestrictionGuard user={user} requiredFeature="historicalData">
+          <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trends</h3>
+              <div className="text-center text-gray-500 py-8">
+                No audit data available for charting
+              </div>
+            </div>
           </div>
-        </div>
+        </PlanRestrictionGuard>
+        
+        {/* History Empty State - Restricted to Basic+ plans */}
+        <PlanRestrictionGuard user={user} requiredFeature="historicalData">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Audit History</h3>
+            <div className="text-gray-500 text-center py-8">
+              No audit history found. Run your first audit to see results here.
+            </div>
+          </div>
+        </PlanRestrictionGuard>
       </div>
     )
   }
@@ -373,13 +391,15 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult, ur
         />
       </PlanRestrictionGuard>
       
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
-        <AuditScoreChart 
-          auditData={audits} 
-          siteName={audits.length > 0 ? audits[0].url : undefined}
-        />
-      </div>
+      {/* Charts Section - Restricted to Basic+ plans */}
+      <PlanRestrictionGuard user={user} requiredFeature="historicalData">
+        <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
+          <AuditScoreChart 
+            auditData={audits} 
+            siteName={audits.length > 0 ? audits[0].url : undefined}
+          />
+        </div>
+      </PlanRestrictionGuard>
       
 
       {/* Image and Link Analysis Section with Tabs */}
@@ -638,17 +658,18 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult, ur
         </div>
       )}
 
-      {/* Enhanced Audit History Section */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Audit History</h3>
-          <button
-            onClick={loadAuditHistory}
-            className="text-sm text-indigo-600 hover:text-indigo-500"
-          >
-            Refresh
-          </button>
-        </div>
+      {/* Enhanced Audit History Section - Restricted to Basic+ plans */}
+      <PlanRestrictionGuard user={user} requiredFeature="historicalData">
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Audit History</h3>
+            <button
+              onClick={loadAuditHistory}
+              className="text-sm text-indigo-600 hover:text-indigo-500"
+            >
+              Refresh
+            </button>
+          </div>
         
         <div className="space-y-4">
           {audits.map((audit) => {
@@ -890,7 +911,8 @@ export default function AuditHistory({ siteId, limit = 20, latestAuditResult, ur
             )
           })}
         </div>
-      </div>
+        </div>
+      </PlanRestrictionGuard>
     </div>
   )
 }

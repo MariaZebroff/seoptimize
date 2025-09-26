@@ -27,33 +27,129 @@ export class SubscriptionClient {
   // Get user's current plan via API
   static async getUserPlan(): Promise<Plan> {
     try {
-      // Check localStorage for recent Pro Plan payment first
+      // Check localStorage first for immediate response
       try {
         const paymentData = localStorage.getItem('pro_plan_payment')
         if (paymentData) {
           const payment = JSON.parse(paymentData)
           // Check if payment is recent (within last 24 hours)
-          if (payment.planId === 'pro' && 
+          if ((payment.planId === 'pro' || payment.planId === 'basic') && 
               (Date.now() - payment.timestamp) < 24 * 60 * 60 * 1000) {
-            console.log('SubscriptionClient: Found recent Pro Plan payment')
-            const proPlan = getPlanById('pro')!
-            return proPlan
+            console.log('SubscriptionClient: Found recent payment for plan:', payment.planId)
+            const plan = getPlanById(payment.planId)!
+            return plan
           }
         }
       } catch (error) {
         console.error('Error checking localStorage payment:', error)
       }
 
-      // Use proper subscription API
+      // Check database for subscription
+      console.log('SubscriptionClient: Fetching plan from database...')
+      
       const response = await fetch('/api/subscription/plan')
       if (!response.ok) {
-        return getDefaultPlan() // Return free plan if error
+        console.log('SubscriptionClient: API error, using free plan')
+        return getDefaultPlan()
       }
+      
       const data = await response.json()
-      return data.plan || getDefaultPlan()
+      const plan = data.plan || getDefaultPlan()
+      console.log('SubscriptionClient: Database plan:', plan.name)
+      
+      // Update localStorage with database result and store user email in cookie
+      try {
+        if (plan.id !== 'free') {
+          localStorage.setItem('pro_plan_payment', JSON.stringify({
+            userId: 'current-user',
+            planId: plan.id,
+            timestamp: Date.now()
+          }))
+          console.log('SubscriptionClient: Cached database plan in localStorage')
+          
+          // Store user email in cookie for fallback (try multiple auth token keys)
+          try {
+            const possibleKeys = [
+              'sb-rarheulwybeiltuvubid-auth-token',
+              'supabase.auth.token',
+              'sb-auth-token',
+              'auth-token'
+            ]
+            
+            let userEmail = null
+            for (const key of possibleKeys) {
+              const authToken = localStorage.getItem(key)
+              if (authToken) {
+                try {
+                  const authData = JSON.parse(authToken)
+                  if (authData.currentSession?.user?.email) {
+                    userEmail = authData.currentSession.user.email
+                    break
+                  } else if (authData.user?.email) {
+                    userEmail = authData.user.email
+                    break
+                  }
+                } catch (parseError) {
+                  // Continue to next key
+                }
+              }
+            }
+            
+            if (userEmail) {
+              document.cookie = `user-email=${userEmail}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`
+              console.log('SubscriptionClient: Stored user email in cookie for fallback:', userEmail)
+            }
+          } catch (cookieError) {
+            console.log('SubscriptionClient: Could not store user email in cookie')
+          }
+        }
+      } catch (error) {
+        console.error('Error caching plan in localStorage:', error)
+      }
+      
+      return plan
     } catch (error) {
       console.error('Error fetching user plan:', error)
       return getDefaultPlan()
+    }
+  }
+
+  // Get user's subscription details via API
+  static async getUserSubscription(userId?: string): Promise<UserSubscription | null> {
+    try {
+      console.log('SubscriptionClient: Fetching subscription details...')
+      
+      // Get user ID from localStorage if not provided
+      let effectiveUserId = userId
+      if (!effectiveUserId) {
+        try {
+          const paymentData = localStorage.getItem('pro_plan_payment')
+          if (paymentData) {
+            const payment = JSON.parse(paymentData)
+            effectiveUserId = payment.userId
+          }
+        } catch (error) {
+          console.error('Error getting userId from localStorage:', error)
+        }
+      }
+      
+      if (!effectiveUserId) {
+        console.log('SubscriptionClient: No userId available')
+        return null
+      }
+      
+      const response = await fetch(`/api/subscription/details?userId=${effectiveUserId}`)
+      console.log('SubscriptionClient: Response status:', response.status)
+      if (!response.ok) {
+        console.log('SubscriptionClient: Response not ok, returning null')
+        return null
+      }
+      const data = await response.json()
+      console.log('SubscriptionClient: Response data:', data)
+      return data.subscription
+    } catch (error) {
+      console.error('Error fetching user subscription:', error)
+      return null
     }
   }
 
@@ -97,18 +193,18 @@ export class SubscriptionClient {
     remainingAudits: number
   }> {
     try {
-      // Check localStorage for recent Pro Plan payment first
+      // Check localStorage for recent payment first
       try {
         const paymentData = localStorage.getItem('pro_plan_payment')
         if (paymentData) {
           const payment = JSON.parse(paymentData)
           // Check if payment is recent (within last 24 hours)
-          if (payment.planId === 'pro' && 
+          if ((payment.planId === 'pro' || payment.planId === 'basic') && 
               (Date.now() - payment.timestamp) < 24 * 60 * 60 * 1000) {
-            console.log('SubscriptionClient: Found recent Pro Plan payment, allowing unlimited audits')
+            console.log('SubscriptionClient: Found recent payment for plan:', payment.planId, 'allowing audits')
             return {
               canPerform: true,
-              remainingAudits: -1 // -1 means unlimited
+              remainingAudits: payment.planId === 'pro' ? -1 : 2 // Pro = unlimited, Basic = 2 per day
             }
           }
         }

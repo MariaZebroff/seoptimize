@@ -205,3 +205,5 @@ GRANT EXECUTE ON FUNCTION get_user_page_count(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_or_create_site(UUID, TEXT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION add_page_to_site(UUID, TEXT, TEXT, BOOLEAN) TO authenticated;
 
+
+

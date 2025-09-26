@@ -4,25 +4,55 @@ import React, { useState, useEffect } from 'react'
 import PaymentForm from './PaymentForm'
 import { PLANS, Plan } from '@/lib/plans'
 import { getCurrentUser } from '@/lib/supabaseAuth'
+import { SubscriptionClient, type UserSubscription } from '@/lib/subscriptionClient'
 import type { User } from '@supabase/supabase-js'
 
 const PricingPlans: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [user, setUser] = useState<User | null>(null)
+  const [currentPlan, setCurrentPlan] = useState<Plan | null>(null)
+  const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadUser = async () => {
-      const currentUser = await getCurrentUser()
-      setUser(currentUser)
+    const loadUserData = async () => {
+      try {
+        setLoading(true)
+        const currentUser = await getCurrentUser()
+        setUser(currentUser)
+        
+        if (currentUser) {
+          // Load current plan
+          const plan = await SubscriptionClient.getUserPlan()
+          setCurrentPlan(plan)
+          
+          // Load subscription details
+          const subscription = await SubscriptionClient.getUserSubscription(currentUser.id)
+          setUserSubscription(subscription)
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-    loadUser()
+    loadUserData()
   }, [])
 
   const handleSelectPlan = (plan: Plan) => {
+    // Check if user is already on this plan
+    if (currentPlan && plan.id === currentPlan.id) {
+      alert(`You are already on the ${plan.name}!`)
+      return
+    }
+    
     // Skip free plan - no payment needed
     if (plan.id === 'free') {
-      alert('You are already on the Free plan! You can start using the basic features right away.')
+      if (confirm('Are you sure you want to switch to the Free plan? You will lose access to premium features.')) {
+        // Handle downgrade to free plan
+        handlePlanChange(plan)
+      }
       return
     }
     
@@ -30,37 +60,87 @@ const PricingPlans: React.FC = () => {
     setShowPaymentForm(true)
   }
 
-  const handlePaymentSuccess = async (paymentIntent: any) => {
-    console.log('Payment successful:', paymentIntent)
-    
+  const handlePlanChange = async (plan: Plan) => {
     try {
-      // Directly update the user's subscription in the database
-      const response = await fetch('/api/test/set-basic-plan', {
+      const response = await fetch('/api/subscription/change-plan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: user?.id
+          userId: user?.id,
+          planId: plan.id
         })
       })
       
       const result = await response.json()
       
       if (result.success) {
-        alert('Payment successful! Your plan has been activated. Redirecting to dashboard...')
-        setShowPaymentForm(false)
-        setSelectedPlan(null)
-        // Redirect to dashboard to see the updated plan
-        window.location.href = '/dashboard'
+        alert(`Successfully switched to ${plan.name}!`)
+        // Reload user data
+        window.location.reload()
       } else {
-        alert('Payment successful but failed to update subscription. Please contact support.')
-        console.error('Failed to update subscription:', result.error)
+        alert('Failed to change plan: ' + result.error)
       }
     } catch (error) {
-      console.error('Error updating subscription:', error)
-      alert('Payment successful but failed to update subscription. Please contact support.')
+      console.error('Error changing plan:', error)
+      alert('Error changing plan: ' + error)
     }
+  }
+
+  const handlePaymentSuccess = async (paymentIntent: any) => {
+    console.log('Payment successful:', paymentIntent)
+    
+    // Ensure subscription is created in database
+    if (selectedPlan && user) {
+      try {
+        console.log('Creating subscription in database for plan:', selectedPlan.id)
+        const response = await fetch('/api/payment/create-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            planId: selectedPlan.id,
+            planName: selectedPlan.name,
+            amount: selectedPlan.price
+          })
+        })
+        
+        const result = await response.json()
+        if (result.success) {
+          console.log('✅ Subscription created successfully:', result.subscription)
+          alert('Payment successful! Your plan is now active. Redirecting to dashboard...')
+        } else {
+          console.error('❌ Subscription creation failed:', result.error)
+          console.error('Error details:', result.details)
+          console.error('Error solution:', result.solution)
+          
+          let errorMessage = 'Payment successful but failed to activate plan.\n\n'
+          errorMessage += `Error: ${result.error}\n`
+          if (result.details) {
+            errorMessage += `Details: ${result.details}\n`
+          }
+          if (result.solution) {
+            errorMessage += `Solution: ${result.solution}`
+          }
+          
+          alert(errorMessage)
+        }
+      } catch (error) {
+        console.error('Error creating subscription:', error)
+        alert('Payment successful but failed to activate plan. Please contact support.')
+      }
+    }
+    
+    setShowPaymentForm(false)
+    setSelectedPlan(null)
+    
+    // Redirect to dashboard
+    setTimeout(() => {
+      window.location.href = '/dashboard'
+    }, 2000)
   }
 
   const handlePaymentError = (error: string) => {
@@ -103,32 +183,68 @@ const PricingPlans: React.FC = () => {
     )
   }
 
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <p className="mt-4 text-gray-600">Loading your current plan...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold text-gray-900 mb-4">
-          Choose Your Plan
+          {user ? 'Change Your Plan' : 'Choose Your Plan'}
         </h2>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Get comprehensive SEO insights and improve your website's performance with our powerful audit tools.
+          {user 
+            ? `You are currently on the ${currentPlan?.name || 'Free Tier'}. Choose a different plan below.`
+            : 'Get comprehensive SEO insights and improve your website\'s performance with our powerful audit tools.'
+          }
         </p>
+        {user && currentPlan && (
+          <div className="mt-4 inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+            <span className="mr-2">📋</span>
+            Current Plan: {currentPlan.name} - ${currentPlan.price === 0 ? 'Free' : currentPlan.price}/month
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {PLANS.map((plan) => (
-          <div
-            key={plan.id}
-            className={`relative bg-white rounded-lg shadow-lg p-8 ${
-              plan.popular ? 'ring-2 ring-indigo-500 transform scale-105' : ''
-            }`}
-          >
-            {plan.popular && (
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="bg-indigo-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-                  Most Popular
-                </span>
-              </div>
-            )}
+        {PLANS.map((plan) => {
+          const isCurrentPlan = currentPlan && plan.id === currentPlan.id
+          const isCancelled = userSubscription && userSubscription.status === 'cancelled'
+          
+          return (
+            <div
+              key={plan.id}
+              className={`relative bg-white rounded-lg shadow-lg p-8 ${
+                plan.popular && !isCurrentPlan ? 'ring-2 ring-indigo-500 transform scale-105' : ''
+              } ${isCurrentPlan ? 'ring-2 ring-green-500 bg-green-50' : ''}`}
+            >
+              {plan.popular && !isCurrentPlan && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-indigo-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                    Most Popular
+                  </span>
+                </div>
+              )}
+              
+              {isCurrentPlan && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className={`px-4 py-1 rounded-full text-sm font-medium ${
+                    isCancelled 
+                      ? 'bg-yellow-500 text-white' 
+                      : 'bg-green-500 text-white'
+                  }`}>
+                    {isCancelled ? 'Current (Cancelled)' : 'Current Plan'}
+                  </span>
+                </div>
+              )}
 
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
@@ -166,18 +282,29 @@ const PricingPlans: React.FC = () => {
 
             <button
               onClick={() => handleSelectPlan(plan)}
+              disabled={isCurrentPlan && !isCancelled}
               className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${
-                plan.id === 'free'
+                isCurrentPlan && !isCancelled
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : plan.id === 'free'
                   ? 'bg-green-600 text-white hover:bg-green-700'
                   : plan.popular
                   ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                   : 'bg-gray-900 text-white hover:bg-gray-800'
               }`}
             >
-              {plan.id === 'free' ? 'Start Free' : 'Get Started'}
+              {isCurrentPlan && !isCancelled 
+                ? 'Current Plan' 
+                : isCurrentPlan && isCancelled
+                ? 'Switch to Free'
+                : plan.id === 'free' 
+                ? 'Switch to Free' 
+                : 'Upgrade to ' + plan.name
+              }
             </button>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="text-center mt-12">
