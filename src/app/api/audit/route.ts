@@ -140,32 +140,40 @@ export async function POST(request: NextRequest) {
       if (auditResult.status === 'success') {
         console.log('PSI audit successful')
         
-        // Save audit result to database with error handling
-        try {
-          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, effectiveUserId)
-          if (saveError) {
-            console.error('Failed to save audit result:', saveError)
-          } else {
-            console.log('Audit result saved to database:', savedAudit?.id)
+        // Save audit result to database only if request hasn't been cancelled
+        if (!request.signal?.aborted) {
+          try {
+            const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, effectiveUserId)
+            if (saveError) {
+              console.error('Failed to save audit result:', saveError)
+            } else {
+              console.log('Audit result saved to database:', savedAudit?.id)
             
-            // Record audit usage for all users
-            try {
-              if (isAuthenticated && effectiveUserId) {
-                await SubscriptionService.recordAuditUsage(effectiveUserId, url)
-                console.log('Audit usage recorded for authenticated user:', effectiveUserId, 'for URL:', url)
+              // Only record audit usage if request hasn't been cancelled
+              if (!request.signal?.aborted) {
+                try {
+                  if (isAuthenticated && effectiveUserId) {
+                    await SubscriptionService.recordAuditUsage(effectiveUserId, url)
+                    console.log('Audit usage recorded for authenticated user:', effectiveUserId, 'for URL:', url)
+                  } else {
+                    // For unauthenticated users, use a shared identifier
+                    const fallbackUserId = 'anonymous-user'
+                    await SubscriptionServiceFallback.recordAuditUsage(fallbackUserId)
+                    console.log('Audit usage recorded for unauthenticated user:', fallbackUserId)
+                  }
+                } catch (usageError) {
+                  console.error('Failed to record audit usage:', usageError)
+                }
               } else {
-                // For unauthenticated users, use a shared identifier
-                const fallbackUserId = 'anonymous-user'
-                await SubscriptionServiceFallback.recordAuditUsage(fallbackUserId)
-                console.log('Audit usage recorded for unauthenticated user:', fallbackUserId)
+                console.log('Audit request was cancelled - not recording usage')
               }
-            } catch (usageError) {
-              console.error('Failed to record audit usage:', usageError)
             }
-          }
         } catch (saveError) {
           console.error('Error saving audit result:', saveError)
         }
+      } else {
+        console.log('PSI audit request was cancelled - not saving result')
+      }
         
         return NextResponse.json(auditResult)
       } else {
@@ -213,33 +221,41 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Save successful HTTP audit result to database
-      try {
-        // Use consistent user ID for anonymous users
-        const userIdForSave = effectiveUserId || 'anonymous-user'
-        const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, userIdForSave)
-        if (saveError) {
-          console.error('Failed to save HTTP audit result:', saveError)
-        } else {
-          console.log('HTTP audit result saved to database:', savedAudit?.id)
+      // Save successful HTTP audit result to database only if not cancelled
+      if (!request.signal?.aborted) {
+        try {
+          // Use consistent user ID for anonymous users
+          const userIdForSave = effectiveUserId || 'anonymous-user'
+          const { data: savedAudit, error: saveError } = await saveAuditResultServer(auditResult, siteId, userIdForSave)
+          if (saveError) {
+            console.error('Failed to save HTTP audit result:', saveError)
+          } else {
+            console.log('HTTP audit result saved to database:', savedAudit?.id)
           
-          // Record audit usage for all users
-          try {
-            if (isAuthenticated && effectiveUserId) {
-              await SubscriptionService.recordAuditUsage(effectiveUserId, url)
-              console.log('Audit usage recorded for authenticated user:', effectiveUserId, 'for URL:', url)
+            // Only record audit usage if request hasn't been cancelled
+            if (!request.signal?.aborted) {
+              try {
+                if (isAuthenticated && effectiveUserId) {
+                  await SubscriptionService.recordAuditUsage(effectiveUserId, url)
+                  console.log('Audit usage recorded for authenticated user:', effectiveUserId, 'for URL:', url)
+                } else {
+                  // For unauthenticated users, use a shared identifier
+                  const fallbackUserId = 'anonymous-user'
+                  await SubscriptionServiceFallback.recordAuditUsage(fallbackUserId)
+                  console.log('Audit usage recorded for unauthenticated user:', fallbackUserId)
+                }
+              } catch (usageError) {
+                console.error('Failed to record audit usage:', usageError)
+              }
             } else {
-              // For unauthenticated users, use a shared identifier
-              const fallbackUserId = 'anonymous-user'
-              await SubscriptionServiceFallback.recordAuditUsage(fallbackUserId)
-              console.log('Audit usage recorded for unauthenticated user:', fallbackUserId)
+              console.log('HTTP audit request was cancelled - not recording usage')
             }
-          } catch (usageError) {
-            console.error('Failed to record audit usage:', usageError)
           }
+        } catch (saveError) {
+          console.error('Error saving HTTP audit result:', saveError)
         }
-      } catch (saveError) {
-        console.error('Error saving HTTP audit result:', saveError)
+      } else {
+        console.log('HTTP audit request was cancelled - not saving result')
       }
 
       return NextResponse.json(auditResult)

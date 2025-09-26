@@ -231,6 +231,12 @@ function AuditPageContent() {
                     Account
                   </button>
                   <button
+                    onClick={() => router.push("/support")}
+                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Support
+                  </button>
+                  <button
                     onClick={() => router.push("/dashboard")}
                     className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
