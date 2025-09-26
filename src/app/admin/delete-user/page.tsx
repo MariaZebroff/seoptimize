@@ -1,10 +1,18 @@
 'use client'
 
-import React, { useState } from 'react'
-import { useUser } from '@/lib/supabaseAuth'
+import React, { useState, useEffect } from 'react'
+import { getCurrentUser } from '@/lib/supabaseAuth'
 
 export default function DeleteUserPage() {
-  const { user } = useUser()
+  const [user, setUser] = useState(null)
+  
+  useEffect(() => {
+    const fetchUser = async () => {
+      const currentUser = await getCurrentUser()
+      setUser(currentUser)
+    }
+    fetchUser()
+  }, [])
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
