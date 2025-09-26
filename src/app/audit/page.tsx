@@ -69,13 +69,17 @@ function AuditPageContent() {
     const getUser = async () => {
       const user = await getCurrentUser()
       console.log('Audit page: User state:', user ? 'authenticated' : 'unauthenticated')
-      setUser(user) // Allow both authenticated and unauthenticated users
       
-      if (user) {
-        // Load user's sites only if authenticated
-        const { data: sitesData } = await getUserSites()
-        setSites(sitesData || [])
+      if (!user) {
+        // Redirect to sign in if not authenticated
+        router.push('/auth/signin')
+        return
       }
+      
+      setUser(user)
+      // Load user's sites
+      const { data: sitesData } = await getUserSites()
+      setSites(sitesData || [])
       setLoading(false)
     }
     getUser()
@@ -211,7 +215,7 @@ function AuditPageContent() {
     )
   }
 
-  // Allow both authenticated and unauthenticated users to access the page
+  // Authentication required to access the audit page
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -222,35 +226,24 @@ function AuditPageContent() {
               <h1 className="text-xl font-semibold text-gray-900">Site Audit</h1>
             </div>
             <div className="flex items-center space-x-4">
-              {user ? (
-                <>
-                  <button
-                    onClick={() => router.push("/account")}
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    Account
-                  </button>
-                  <button
-                    onClick={() => router.push("/support")}
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    Support
-                  </button>
-                  <button
-                    onClick={() => router.push("/dashboard")}
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    ← Back to Dashboard
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => router.push("/")}
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  ← Back to Home
-                </button>
-              )}
+              <button
+                onClick={() => router.push("/account")}
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Account
+              </button>
+              <button
+                onClick={() => router.push("/support")}
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Support
+              </button>
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                ← Back to Dashboard
+              </button>
             </div>
           </div>
         </div>
@@ -266,7 +259,6 @@ function AuditPageContent() {
           </div>
 
           {/* User Information */}
-          {user && (
             <div className="bg-white shadow rounded-lg p-6 mb-8">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -335,7 +327,6 @@ function AuditPageContent() {
                 </div>
               </div>
             </div>
-          )}
 
           {/* Audit Form */}
           <AuditLimitGuard user={user}>
