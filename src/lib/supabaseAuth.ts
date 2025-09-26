@@ -99,6 +99,40 @@ export const signInWithGoogle = async () => {
   return { data, error }
 }
 
+export const resetPassword = async (email: string) => {
+  checkEnvVars()
+  const redirectUrl = getRedirectUrl()
+  
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth/reset-password`,
+  })
+  return { data, error }
+}
+
+export const checkEmailExists = async (email: string) => {
+  checkEnvVars()
+  
+  try {
+    // Use API endpoint to check email existence
+    const response = await fetch('/api/auth/check-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to check email')
+    }
+    
+    const data = await response.json()
+    return { exists: data.exists, error: null }
+  } catch (error) {
+    return { exists: false, error: { message: 'Failed to check email existence' } }
+  }
+}
+
 // Site management functions
 export const addSite = async (url: string, title?: string) => {
   checkEnvVars()

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn, signInWithGoogle } from "@/lib/supabaseAuth"
+import { signIn, signInWithGoogle, resetPassword } from "@/lib/supabaseAuth"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -10,6 +10,10 @@ export default function SignIn() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("")
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false)
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState("")
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +47,28 @@ export default function SignIn() {
     } catch {
       setError("Google sign in failed. Please try again.")
       setIsLoading(false)
+    }
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotPasswordLoading(true)
+    setForgotPasswordMessage("")
+    setError("")
+
+    try {
+      const { error } = await resetPassword(forgotPasswordEmail)
+      if (error) {
+        setError(error.message)
+      } else {
+        setForgotPasswordMessage("Password reset email sent! Check your inbox.")
+        setForgotPasswordEmail("")
+        setShowForgotPassword(false)
+      }
+    } catch {
+      setError("Failed to send reset email. Please try again.")
+    } finally {
+      setForgotPasswordLoading(false)
     }
   }
 
@@ -99,8 +125,24 @@ export default function SignIn() {
             </div>
           </div>
 
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                Forgot your password?
+              </button>
+            </div>
+          </div>
+
           {error && (
             <div className="text-red-600 text-sm text-center">{error}</div>
+          )}
+
+          {forgotPasswordMessage && (
+            <div className="text-green-600 text-sm text-center">{forgotPasswordMessage}</div>
           )}
 
           <div>
@@ -153,6 +195,59 @@ export default function SignIn() {
             </div>
           </div>
         </form>
+
+        {/* Forgot Password Modal */}
+        {showForgotPassword && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Reset your password
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Enter your email address and we'll send you a link to reset your password.
+                </p>
+                <form onSubmit={handleForgotPassword}>
+                  <div className="mb-4">
+                    <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-700 mb-1">
+                      Email address
+                    </label>
+                    <input
+                      id="forgot-email"
+                      type="email"
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="Enter your email"
+                      value={forgotPasswordEmail}
+                      onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotPassword(false)
+                        setForgotPasswordEmail("")
+                        setForgotPasswordMessage("")
+                        setError("")
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={forgotPasswordLoading}
+                      className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      {forgotPasswordLoading ? "Sending..." : "Send Reset Email"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
