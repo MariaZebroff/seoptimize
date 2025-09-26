@@ -72,9 +72,14 @@ export const signOut = async () => {
 }
 
 export const getCurrentUser = async () => {
-  checkEnvVars()
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
+  try {
+    checkEnvVars()
+    const { data: { user } } = await supabase.auth.getUser()
+    return user
+  } catch (error) {
+    console.warn('Supabase environment variables not configured:', error.message)
+    return null
+  }
 }
 
 

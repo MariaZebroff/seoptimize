@@ -21,7 +21,15 @@ export default function LandingPage() {
         setLoading(false)
       }
     }
+    
+    // Add timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      setLoading(false)
+    }, 5000) // 5 second timeout
+    
     checkUser()
+    
+    return () => clearTimeout(timeout)
   }, [])
 
   const pricingPlans = [
@@ -132,8 +140,11 @@ export default function LandingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <div className="text-lg text-gray-600">Loading SEO Optimize...</div>
+        </div>
       </div>
     )
   }
