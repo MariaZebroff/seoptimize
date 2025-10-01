@@ -61,3 +61,4 @@ SELECT 'auth.users' as table_name, COUNT(*) as row_count FROM auth.users;
 
 
 
+

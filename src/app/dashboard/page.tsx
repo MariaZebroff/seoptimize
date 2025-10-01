@@ -7,6 +7,7 @@ import { SubscriptionClient } from "@/lib/subscriptionClient"
 import { getPlanById, type Plan } from "@/lib/plans"
 import { SiteLimitClient } from "@/lib/siteLimitClient"
 import { PageAuditUsageClient, type PageAuditStatus } from "@/lib/pageAuditUsageClient"
+import { useNotification } from "@/hooks/useNotification"
 import type { User } from "@supabase/supabase-js"
 
 interface Site {
@@ -41,6 +42,7 @@ export default function Dashboard() {
   const [pageAuditStatuses, setPageAuditStatuses] = useState<Map<string, PageAuditStatus>>(new Map())
   const [auditStatusLoading, setAuditStatusLoading] = useState(false)
   const router = useRouter()
+  const { success, error: showError, warning, info } = useNotification()
 
   const loadSites = useCallback(async () => {
     try {
@@ -266,7 +268,7 @@ export default function Dashboard() {
     // Find the site to get its details
     const site = sites.find(s => s.id === siteId)
     if (!site) {
-      alert('Site not found')
+      showError('Site not found', 'Error')
       return
     }
 
@@ -301,16 +303,17 @@ export default function Dashboard() {
         if (error.message === 'User not authenticated') {
           router.push('/auth/signin')
         } else {
-          alert('Failed to delete site. Please try again.')
+          showError('Failed to delete site. Please try again.', 'Delete Failed')
         }
       } else {
         setSites(sites.filter(site => site.id !== siteId))
+        success('Site deleted successfully!', 'Site Removed')
         // Reload page audit statuses since we deleted a site
         loadPageAuditStatuses()
       }
     } catch (err) {
       console.error('Error deleting site:', err)
-      alert('Failed to delete site. Please try again.')
+      showError('Failed to delete site. Please try again.', 'Delete Error')
     }
   }
 
@@ -355,7 +358,7 @@ export default function Dashboard() {
     // Find the site to get its domain for validation
     const site = sites.find(s => s.id === siteId)
     if (!site) {
-      alert('Site not found')
+      showError('Site not found', 'Error')
       return
     }
 
@@ -365,11 +368,11 @@ export default function Dashboard() {
       const subPageUrl = new URL(newPageUrl.trim())
       
       if (mainUrl.hostname !== subPageUrl.hostname) {
-        alert(`Sub-page must be from the same domain as the main page (${mainUrl.hostname}). Please enter a URL from ${mainUrl.hostname}`)
+        showError(`Sub-page must be from the same domain as the main page (${mainUrl.hostname}). Please enter a URL from ${mainUrl.hostname}`, 'Domain Mismatch')
         return
       }
     } catch (error) {
-      alert('Please enter a valid URL')
+      showError('Please enter a valid URL', 'Invalid URL')
       return
     }
 
@@ -379,7 +382,7 @@ export default function Dashboard() {
       if (user && userPlan) {
         const pageLimitCheck = await SiteLimitClient.canUserAddPage(siteId, userPlan.id)
         if (!pageLimitCheck.canAdd) {
-          alert(pageLimitCheck.reason || "Page limit reached")
+          warning(pageLimitCheck.reason || "Page limit reached", 'Limit Reached')
           setIsAddingPage(false)
           return
         }
@@ -387,16 +390,17 @@ export default function Dashboard() {
 
       const { data, error } = await addPage(siteId, newPageUrl.trim(), newPageTitle.trim() || undefined)
       if (error) {
-        alert('Failed to add page: ' + error.message)
+        showError('Failed to add page: ' + error.message, 'Add Page Failed')
       } else {
         setNewPageUrl("")
         setNewPageTitle("")
         setPageUrlError(null)
         setShowAddPage(null)
+        success('Page added successfully!', 'Page Added')
         loadSites() // Reload sites to get updated pages
       }
     } catch (err) {
-      alert('Failed to add page. Please try again.')
+      showError('Failed to add page. Please try again.', 'Add Page Error')
     } finally {
       setIsAddingPage(false)
     }
@@ -406,13 +410,13 @@ export default function Dashboard() {
     // Find the site and page to get details
     const site = sites.find(s => s.id === siteId)
     if (!site) {
-      alert('Site not found')
+      showError('Site not found', 'Error')
       return
     }
 
     const page = site.pages?.find(p => p.id === pageId)
     if (!page) {
-      alert('Page not found')
+      showError('Page not found', 'Error')
       return
     }
 
@@ -453,14 +457,15 @@ export default function Dashboard() {
     try {
       const { error } = await deletePage(pageId)
       if (error) {
-        alert('Failed to delete page: ' + error.message)
+        showError('Failed to delete page: ' + error.message, 'Delete Page Failed')
       } else {
+        success('Page deleted successfully!', 'Page Removed')
         loadSites() // Reload sites to get updated pages
         // Reload page audit statuses since we deleted a page
         loadPageAuditStatuses()
       }
     } catch (err) {
-      alert('Failed to delete page. Please try again.')
+      showError('Failed to delete page. Please try again.', 'Delete Page Error')
     }
   }
 
@@ -471,7 +476,7 @@ export default function Dashboard() {
       if (user && userPlan) {
         const pageLimitCheck = await SiteLimitClient.canUserAddPage(siteId, userPlan.id)
         if (!pageLimitCheck.canAdd) {
-          alert(pageLimitCheck.reason || "Page limit reached")
+          warning(pageLimitCheck.reason || "Page limit reached", 'Limit Reached')
           setIsDetectingPages(null)
           return
         }

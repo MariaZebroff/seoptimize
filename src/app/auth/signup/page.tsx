@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { signUp, signInWithGoogle, checkEmailExists } from "@/lib/supabaseAuth"
 import { validatePassword, getPasswordStrength, getPasswordStrengthColor } from "@/lib/passwordValidation"
+import { event } from "@/lib/gtag"
+import { useNotification } from "@/hooks/useNotification"
 import Link from "next/link"
 
 export default function SignUp() {
@@ -12,6 +14,7 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const { success, error: showError } = useNotification()
   const [showPasswordValidation, setShowPasswordValidation] = useState(false)
   const [emailValidation, setEmailValidation] = useState<{
     isValid: boolean
@@ -84,12 +87,22 @@ export default function SignUp() {
 
       if (error) {
         setError(error.message)
+        showError(error.message, "Signup Failed")
       } else {
-        setError("Check your email for a confirmation link!")
+        setError("")
+        success("Check your email for a confirmation link!", "Account Created")
+        // Track successful signup
+        event({
+          action: 'sign_up',
+          category: 'engagement',
+          label: 'email_signup'
+        })
         // Don't auto sign in, user needs to confirm email first
       }
     } catch {
-      setError("Something went wrong. Please try again.")
+      const errorMessage = "Something went wrong. Please try again."
+      setError(errorMessage)
+      showError(errorMessage, "Signup Error")
     } finally {
       setIsLoading(false)
     }
@@ -100,11 +113,22 @@ export default function SignUp() {
     try {
       const { error } = await signInWithGoogle()
       if (error) {
-        setError("Google sign in failed. Please try again.")
+        const errorMessage = "Google sign in failed. Please try again."
+        setError(errorMessage)
+        showError(errorMessage, "Google Signup Failed")
         setIsLoading(false)
+      } else {
+        // Track Google signup
+        event({
+          action: 'sign_up',
+          category: 'engagement',
+          label: 'google_signup'
+        })
       }
     } catch {
-      setError("Google sign in failed. Please try again.")
+      const errorMessage = "Google sign in failed. Please try again."
+      setError(errorMessage)
+      showError(errorMessage, "Google Signup Error")
       setIsLoading(false)
     }
   }
@@ -257,6 +281,35 @@ export default function SignUp() {
           {error && (
             <div className="text-red-600 text-sm text-center">{error}</div>
           )}
+
+          {/* Terms and Privacy Agreement */}
+          <div className="flex items-start">
+            <div className="flex items-center h-5">
+              <input
+                id="terms"
+                name="terms"
+                type="checkbox"
+                required
+                className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+              />
+            </div>
+            <div className="ml-3 text-sm">
+              <label htmlFor="terms" className="text-gray-700">
+                I agree to the{' '}
+                <Link href="/terms-of-service" className="text-indigo-600 hover:text-indigo-500">
+                  Terms of Service
+                </Link>
+                {', '}
+                <Link href="/privacy-policy" className="text-indigo-600 hover:text-indigo-500">
+                  Privacy Policy
+                </Link>
+                {' and '}
+                <Link href="/cookie-policy" className="text-indigo-600 hover:text-indigo-500">
+                  Cookie Policy
+                </Link>
+              </label>
+            </div>
+          </div>
 
           <div>
             <button

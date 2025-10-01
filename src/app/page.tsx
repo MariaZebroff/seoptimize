@@ -3,7 +3,10 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { getCurrentUser } from "@/lib/supabaseAuth"
+import { event } from "@/lib/gtag"
+import Footer from "@/components/Footer"
 import { useEffect } from "react"
+import Link from "next/link"
 
 export default function LandingPage() {
   const [user, setUser] = useState(null)
@@ -156,19 +159,35 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-indigo-600">SEO Optimize</h1>
+              <Link href="/" className="text-2xl font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+                SEO Optimize
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
               {user ? (
                 <>
                   <button
-                    onClick={() => router.push("/dashboard")}
+                    onClick={() => {
+                      event({
+                        action: 'click',
+                        category: 'navigation',
+                        label: 'dashboard_button'
+                      })
+                      router.push("/dashboard")
+                    }}
                     className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Dashboard
                   </button>
                   <button
-                    onClick={() => router.push("/audit")}
+                    onClick={() => {
+                      event({
+                        action: 'click',
+                        category: 'navigation',
+                        label: 'start_audit_button'
+                      })
+                      router.push("/audit")
+                    }}
                     className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Start Audit
@@ -177,13 +196,27 @@ export default function LandingPage() {
               ) : (
                 <>
                   <button
-                    onClick={() => router.push("/auth/signin")}
+                    onClick={() => {
+                      event({
+                        action: 'click',
+                        category: 'navigation',
+                        label: 'signin_button'
+                      })
+                      router.push("/auth/signin")
+                    }}
                     className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Sign In
                   </button>
                   <button
-                    onClick={() => router.push("/auth/signup")}
+                    onClick={() => {
+                      event({
+                        action: 'click',
+                        category: 'navigation',
+                        label: 'signup_button'
+                      })
+                      router.push("/auth/signup")
+                    }}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
                   >
                     Sign Up
@@ -403,45 +436,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-2xl font-bold text-indigo-400 mb-4">SEO Optimize</h3>
-              <p className="text-gray-400">
-                Detailed page-by-page SEO analysis for better search rankings.
-              </p>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="/audit" className="hover:text-white transition-colors">Page Audit</a></li>
-                <li><a href="/pricing" className="hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="/support" className="hover:text-white transition-colors">Support</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Account</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="/auth/signin" className="hover:text-white transition-colors">Sign In</a></li>
-                <li><a href="/auth/signup" className="hover:text-white transition-colors">Sign Up</a></li>
-                <li><a href="/dashboard" className="hover:text-white transition-colors">Dashboard</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="/support" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="mailto:support@seoptimize.com" className="hover:text-white transition-colors">Contact Us</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 SEO Optimize. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

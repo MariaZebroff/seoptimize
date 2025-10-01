@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Ensure Lato font is applied globally */
+body {
+  font-family: var(--font-lato), system-ui, sans-serif;
+}

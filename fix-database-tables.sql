@@ -108,3 +108,4 @@ SELECT 'user_subscriptions' as table_name, count(*) as row_count FROM user_subsc
 UNION ALL
 SELECT 'user_usage' as table_name, count(*) as row_count FROM user_usage;
 
+

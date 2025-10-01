@@ -20,3 +20,4 @@ SELECT
 FROM user_subscriptions 
 WHERE user_id = '6e23fb60-f86a-4c81-bbb4-cc64796feed3';
 
+

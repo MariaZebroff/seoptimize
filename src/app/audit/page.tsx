@@ -10,6 +10,7 @@ import AuditHistory from "@/components/AuditHistory"
 import { AuditLimitGuard, PlanRestrictionGuard } from "@/components/PlanRestrictionGuard"
 import { SubscriptionClient } from '@/lib/subscriptionClient'
 import { Plan } from '@/lib/plans'
+import { event } from "@/lib/gtag"
 import type { User } from "@supabase/supabase-js"
 
 // Use the same interface as AuditResults component
@@ -191,6 +192,14 @@ function AuditPageContent() {
       })
 
       setAuditResult(data)
+      
+      // Track successful audit completion
+      event({
+        action: 'audit_completed',
+        category: 'engagement',
+        label: userPlan?.name || 'free',
+        value: 1
+      })
     } catch (err) {
       // Don't show error if the request was aborted
       if (err instanceof Error && err.name === 'AbortError') {

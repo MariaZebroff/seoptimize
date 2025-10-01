@@ -239,3 +239,4 @@ CREATE TABLE user_subscriptions (
 **The enhanced Account page provides comprehensive subscription information while maintaining a clean, professional interface.** 🚀
 
 
+

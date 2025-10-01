@@ -174,3 +174,4 @@ Plan Features: Unlimited audits • 5 sites • 20 pages/site • AI insights
 **All plan fallbacks have been fixed to use the Free Plan as the default instead of Basic Plan.** 🚀
 
 
+

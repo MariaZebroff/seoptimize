@@ -179,3 +179,4 @@ export const getPasswordStrengthColor = (score: number): string => {
   if (score === 4) return "text-blue-600"
   return "text-green-600"
 }
+

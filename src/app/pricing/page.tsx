@@ -1,4 +1,6 @@
 import PricingPlans from '@/components/PricingPlans'
+import Footer from '@/components/Footer'
+import Link from 'next/link'
 
 export default function PricingPage() {
   return (
@@ -7,7 +9,9 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">SEO Optimize</h1>
+              <Link href="/" className="text-xl font-semibold text-gray-900 hover:text-indigo-600 transition-colors">
+                SEO Optimize
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
               <a
@@ -36,6 +40,8 @@ export default function PricingPage() {
       <main>
         <PricingPlans />
       </main>
+      
+      <Footer />
     </div>
   )
 }

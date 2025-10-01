@@ -161,11 +161,11 @@ export default function PremiumAIFeatures({ onUpgrade }: PremiumAIFeaturesProps)
               onClick={onUpgrade}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105"
             >
-              Start Free Trial
+              Upgrade to Pro
             </button>
             
             <p className="text-center text-sm text-gray-500 mt-4">
-              14-day free trial • Cancel anytime • No credit card required
+              Cancel anytime • No long-term commitments
             </p>
           </div>
         </div>
@@ -366,11 +366,11 @@ export default function PremiumAIFeatures({ onUpgrade }: PremiumAIFeaturesProps)
 
           <div>
             <h4 className="font-semibold text-gray-900 mb-2">
-              Is there a free trial?
+              Can I cancel anytime?
             </h4>
             <p className="text-gray-600">
-              Yes! We offer a 14-day free trial with full access to all AI Pro features. 
-              No credit card required to start your trial.
+              Yes! You can cancel your subscription at any time with no penalties or fees. 
+              You'll continue to have access to Pro features until the end of your billing period.
             </p>
           </div>
 

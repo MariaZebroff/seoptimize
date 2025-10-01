@@ -75,3 +75,4 @@ FROM information_schema.columns
 WHERE table_name IN ('user_subscriptions', 'user_usage')
 ORDER BY table_name, ordinal_position;
 
+

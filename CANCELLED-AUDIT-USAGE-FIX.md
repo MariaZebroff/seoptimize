@@ -177,3 +177,4 @@ The fix ensures that:
 This fix ensures that users are only charged for audit credits when they receive complete audit results. Cancelled audits (whether by user action or technical issues) no longer count against usage limits, making the system fairer and more user-friendly.
 
 The implementation is robust, handles edge cases properly, and maintains backward compatibility while improving the overall user experience.
+

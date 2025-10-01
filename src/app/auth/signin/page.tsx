@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { signIn, signInWithGoogle, resetPassword } from "@/lib/supabaseAuth"
 import { useRouter } from "next/navigation"
+import { event } from "@/lib/gtag"
+import { useNotification } from "@/hooks/useNotification"
 import Link from "next/link"
 
 export default function SignIn() {
@@ -15,6 +17,7 @@ export default function SignIn() {
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false)
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState("")
   const router = useRouter()
+  const { success, error: showError } = useNotification()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,11 +29,21 @@ export default function SignIn() {
 
       if (error) {
         setError(error.message)
+        showError(error.message, "Sign In Failed")
       } else {
+        // Track successful signin
+        event({
+          action: 'login',
+          category: 'engagement',
+          label: 'email_signin'
+        })
+        success("Welcome back!", "Signed In")
         router.push("/dashboard")
       }
     } catch {
-      setError("Something went wrong. Please try again.")
+      const errorMessage = "Something went wrong. Please try again."
+      setError(errorMessage)
+      showError(errorMessage, "Sign In Error")
     } finally {
       setIsLoading(false)
     }
@@ -41,11 +54,23 @@ export default function SignIn() {
     try {
       const { error } = await signInWithGoogle()
       if (error) {
-        setError("Google sign in failed. Please try again.")
+        const errorMessage = "Google sign in failed. Please try again."
+        setError(errorMessage)
+        showError(errorMessage, "Google Sign In Failed")
         setIsLoading(false)
+      } else {
+        // Track Google signin
+        event({
+          action: 'login',
+          category: 'engagement',
+          label: 'google_signin'
+        })
+        success("Welcome back!", "Signed In")
       }
     } catch {
-      setError("Google sign in failed. Please try again.")
+      const errorMessage = "Google sign in failed. Please try again."
+      setError(errorMessage)
+      showError(errorMessage, "Google Sign In Error")
       setIsLoading(false)
     }
   }
@@ -60,13 +85,18 @@ export default function SignIn() {
       const { error } = await resetPassword(forgotPasswordEmail)
       if (error) {
         setError(error.message)
+        showError(error.message, "Password Reset Failed")
       } else {
-        setForgotPasswordMessage("Password reset email sent! Check your inbox.")
+        const successMessage = "Password reset email sent! Check your inbox."
+        setForgotPasswordMessage(successMessage)
+        success(successMessage, "Reset Email Sent")
         setForgotPasswordEmail("")
         setShowForgotPassword(false)
       }
     } catch {
-      setError("Failed to send reset email. Please try again.")
+      const errorMessage = "Failed to send reset email. Please try again."
+      setError(errorMessage)
+      showError(errorMessage, "Password Reset Error")
     } finally {
       setForgotPasswordLoading(false)
     }

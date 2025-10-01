@@ -5,6 +5,7 @@ import PaymentForm from './PaymentForm'
 import { PLANS, Plan } from '@/lib/plans'
 import { getCurrentUser } from '@/lib/supabaseAuth'
 import { SubscriptionClient, type UserSubscription } from '@/lib/subscriptionClient'
+import { useNotification } from '@/hooks/useNotification'
 import type { User } from '@supabase/supabase-js'
 
 const PricingPlans: React.FC = () => {
@@ -14,6 +15,7 @@ const PricingPlans: React.FC = () => {
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null)
   const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null)
   const [loading, setLoading] = useState(true)
+  const { success, error: showError, warning } = useNotification()
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -43,7 +45,7 @@ const PricingPlans: React.FC = () => {
   const handleSelectPlan = (plan: Plan) => {
     // Check if user is already on this plan
     if (currentPlan && plan.id === currentPlan.id) {
-      alert(`You are already on the ${plan.name}!`)
+      warning(`You are already on the ${plan.name}!`, 'Current Plan')
       return
     }
     
@@ -76,15 +78,15 @@ const PricingPlans: React.FC = () => {
       const result = await response.json()
       
       if (result.success) {
-        alert(`Successfully switched to ${plan.name}!`)
+        success(`Successfully switched to ${plan.name}!`, 'Plan Changed')
         // Reload user data
         window.location.reload()
       } else {
-        alert('Failed to change plan: ' + result.error)
+        showError('Failed to change plan: ' + result.error, 'Plan Change Failed')
       }
     } catch (error) {
       console.error('Error changing plan:', error)
-      alert('Error changing plan: ' + error)
+      showError('Error changing plan: ' + error, 'Plan Change Error')
     }
   }
 
@@ -111,7 +113,7 @@ const PricingPlans: React.FC = () => {
         const result = await response.json()
         if (result.success) {
           console.log('✅ Subscription created successfully:', result.subscription)
-          alert('Payment successful! Your plan is now active. Redirecting to dashboard...')
+          success('Payment successful! Your plan is now active. Redirecting to dashboard...', 'Payment Complete')
         } else {
           console.error('❌ Subscription creation failed:', result.error)
           console.error('Error details:', result.details)
@@ -126,11 +128,11 @@ const PricingPlans: React.FC = () => {
             errorMessage += `Solution: ${result.solution}`
           }
           
-          alert(errorMessage)
+          showError(errorMessage, 'Activation Failed')
         }
       } catch (error) {
         console.error('Error creating subscription:', error)
-        alert('Payment successful but failed to activate plan. Please contact support.')
+        showError('Payment successful but failed to activate plan. Please contact support.', 'Activation Error')
       }
     }
     
@@ -145,7 +147,7 @@ const PricingPlans: React.FC = () => {
 
   const handlePaymentError = (error: string) => {
     console.error('Payment error:', error)
-    alert(`Payment failed: ${error}`)
+    showError(`Payment failed: ${error}`, 'Payment Error')
   }
 
   if (showPaymentForm && selectedPlan) {
@@ -217,7 +219,7 @@ const PricingPlans: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {PLANS.map((plan) => {
           const isCurrentPlan = currentPlan && plan.id === currentPlan.id
-          const isCancelled = userSubscription && userSubscription.status === 'cancelled'
+          const isCancelled = userSubscription?.status === 'cancelled' || false
           
           return (
             <div
@@ -282,7 +284,7 @@ const PricingPlans: React.FC = () => {
 
             <button
               onClick={() => handleSelectPlan(plan)}
-              disabled={isCurrentPlan && !isCancelled}
+              disabled={!!(isCurrentPlan && !isCancelled)}
               className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${
                 isCurrentPlan && !isCancelled
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -309,7 +311,7 @@ const PricingPlans: React.FC = () => {
 
       <div className="text-center mt-12">
         <p className="text-gray-600 mb-4">
-          All plans include a 14-day free trial. Cancel anytime.
+          Cancel anytime. No long-term commitments.
         </p>
         <div className="flex items-center justify-center space-x-6 text-sm text-gray-500">
           <div className="flex items-center">

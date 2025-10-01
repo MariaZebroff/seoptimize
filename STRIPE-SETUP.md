@@ -69,7 +69,7 @@ Use these test card numbers to test different scenarios:
    ```
    http://localhost:3000/pricing
    ```
-
+   
 3. **Test a payment**:
    - Select a plan
    - Use test card `4242424242424242`
